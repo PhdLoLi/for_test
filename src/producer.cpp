@@ -56,6 +56,10 @@ namespace ndn {
 
       std::string live_prefix = pt.get<std::string>("ndnlive.prefix");
       std::string stream_id = pt.get<std::string>("ndnlive.stream_id");
+
+      if (argc > 1) 
+        stream_id = argv[1];
+
       VideoGenerator generator;
       
       signal(SIGINT, sig_int);

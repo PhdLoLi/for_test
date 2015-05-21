@@ -152,6 +152,9 @@ static void sig_int(int num,
       std::string stream_id = pt.get<std::string>("ndnlive.stream_id");
       std::string live_prefix = pt.get<std::string>("ndnlive.prefix");
 
+      if (argc > 1) 
+        stream_id = argv[1];
+
       Name videoinfoName = Name(live_prefix).append(stream_id).append("video").append("streaminfo");
       Consumer* videoinfoConsumer = new Consumer(videoinfoName, SDR);
       videoinfoConsumer->setContextOption(MUST_BE_FRESH_S, true);
