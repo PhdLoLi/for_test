@@ -12,8 +12,8 @@ Description
 
 NDN-based Live Streaming Video Project using Consumer/Producer API. 
 
-The producer keeps capturing the video from the camera and the audio from the microphone then publishing/producing them frame by frame. 
-The consumer consumes the video and audio frame by frame, then play them back together.
+- The producer keeps capturing the video from the camera and the audio from the microphone then publishing/producing them frame by frame. 
+- The consumer consumes the video and audio frame by frame, then play them back together.
 
 Structure
 ----
@@ -26,8 +26,6 @@ The directory structure is as follows:
     * **wscript** *-- waf instruction file*
     * **config.ini** *-- config file of this project* 
     * **.waf-tools/** *-- additional waf tools*
-    * **examples/** *-- no use now*
-    * **tests/** *-- no use now*
     * **LICENSE**
     * **README.md**
     * **INSTALL.md**
