@@ -6,7 +6,7 @@
  */
 
 #include "video-player.hpp"
-
+#include <thread>
 
 namespace ndn {
 
@@ -100,6 +100,7 @@ namespace ndn {
     VideoAudio *va = &s_va;
     pthread_t thread; 
     int rc;
+//    std::thread meme (std::bind(&VideoPlayer::h264_capture_thread, this, va));
     rc = pthread_create(&thread, NULL, h264_capture_thread , (void *)va);
 //    rc = pthread_create(&thread, NULL, h264_appsrc_thread ,(void *)va);
     std::cout << "h264_appsrc_init OK! " << std::endl;
@@ -132,5 +133,17 @@ namespace ndn {
       }
 
     }
+  }
+
+  int VideoPlayer::get_video_rate() {
+    VideoAudio *va = &s_va;
+    App *video = &(va->v_app);
+    return video->rate;
+  }
+
+  int VideoPlayer::get_audio_rate() {
+    VideoAudio *va = &s_va;
+    App *audio = &(va->a_app);
+    return audio->rate;
   }
 } // namespace ndn

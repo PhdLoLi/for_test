@@ -109,6 +109,7 @@ namespace ndn {
   ProducerCallback::processOutgoingData(Producer& pro, const Data& data)
   {
     interest_outgoing ++;
+//    printf("OutgoingData %s\n", data.getName().toUri().c_str());
 //    std::cout << "OutgoingData " << data.getName() << std::endl;
   //    std::cout << data.getFinalBlockId() << std::endl;
   }

@@ -38,6 +38,7 @@ namespace ndn {
   void
   ConsumerCallback::processDataVideo(Consumer& con, const Data& data) {
 //    std::cout << "Video Data Received! Name: " << data.getName().toUri() << std::endl;
+    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
     frame_v->addSegment(const_cast<Data&>(data));
     interest_r_v++;
   }
@@ -145,7 +146,7 @@ namespace ndn {
   ConsumerCallback::processData(Consumer& con, const Data& data)
   {
     interest_r++;
-//    std::cout << "DATA IN CNTX Name: " << data.getName() << "FinalBlockId: " <<data.getFinalBlockId() << std::endl;
+    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
   }
   
   bool
@@ -175,13 +176,13 @@ namespace ndn {
   ConsumerCallback::onRetx(Consumer& con, Interest& interest)
   {
     interest_retx ++;
-//    std::cout << "Retransmitted " << interest.getName() << std::endl;
+    std::cout << "Retransmitted " << interest.getName() << std::endl;
   }
 
   void
   ConsumerCallback::onExpr(Consumer& con, Interest& interest)
   {
     interest_expr ++;
-//    std::cout << "Expired " << interest.getName() << std::endl;
+    std::cout << "Expired " << interest.getName() << std::endl;
   }
 } // namespace ndn

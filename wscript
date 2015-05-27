@@ -22,6 +22,7 @@ def configure(conf):
     conf.env.LIB_PTHREAD = 'pthread'
 
     USED_BOOST_LIBS = ['system', 'iostreams', 'filesystem', 'random']
+    conf.check_boost(lib=USED_BOOST_LIBS, mandatory=True)
 #   ['system', 'filesystem', 'date_time', 'iostreams',
 #                      'regex', 'program_options', 'chrono', 'random']
 

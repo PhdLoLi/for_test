@@ -40,6 +40,9 @@ namespace ndn {
       void
       consume_whole(Consumer *frameConsumer, Consumer *sampleConsumer);
 
+      int get_video_rate();
+      int get_audio_rate();
+
     private:
 
       struct DataNode
@@ -72,6 +75,9 @@ namespace ndn {
       };
 
       VideoAudio s_va;
+
+      int audio_samplerate;
+      int video_rate;
 
       static gboolean
       feed_data  (GstElement * pipeline, guint size, App * app)
@@ -234,6 +240,8 @@ namespace ndn {
         gst_structure_get_fraction (str, "framerate", &num, &denom);
 //        gst_structure_remove_fields (str,"level", "profile", "height", "width", "framerate", "pixel-aspect-ratio", "parsed", NULL);
         video->rate = ceil(num/double(denom)); //FIX ME
+//        video_rate = video->rate;
+        std::cout << "num " << num << "  denom " << denom << std::endl; 
         std::cout << "video->rate " << video->rate << std::endl; 
        
         g_object_set (G_OBJECT (video->queue), "max-size-time", 500000000, NULL); 
@@ -262,7 +270,10 @@ namespace ndn {
         GstStructure *str_audio = gst_caps_get_structure (caps_audio, 0);
         int samplerate;
         gst_structure_get_int (str_audio, "rate", &samplerate);
-        audio->rate = samplerate/1000; //FIX ME
+        audio->rate = samplerate; //FIX ME
+//        audio_samplerate = samplerate;
+        std::cout << "samplerate " << samplerate << std::endl;
+
         std::cout << "audio->rate " << audio->rate << std::endl; 
       
         g_object_set (G_OBJECT (audio->queue), "max-size-time", 500000000, NULL); 

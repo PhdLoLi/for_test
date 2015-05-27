@@ -89,7 +89,9 @@ static void sig_int(int num,
 
   void 
   FrameConsumer::audioConsumeFrames(std::string live_prefix, std::string stream_id) {
-//    interval = 20;
+    int samplerate = 44100; //(cb_consumer.player).get_audio_rate();
+    interval = 1000000 / samplerate;
+    std::cout << "interval " << interval << std::endl;
     Name sampleName = Name(live_prefix).append(stream_id).append("audio").append("content");
     framenumber = cb_consumer.start_frame_a;
     Consumer* sampleConsumer; 
@@ -120,11 +122,16 @@ static void sig_int(int num,
 
   void 
   FrameConsumer::videoConsumeFrames(std::string live_prefix, std::string stream_id) {
-//    interval = 33;
+    int samplerate = 30; //(cb_consumer.player).get_audio_rate();
+    interval = 1000 / samplerate;
+//    interval = 30;
     Name sampleName = Name(live_prefix).append(stream_id).append("video").append("content");
     framenumber = cb_consumer.start_frame_v;
     Consumer* sampleConsumer; 
     sampleConsumer = new Consumer(sampleName, UDR);
+
+    sampleConsumer->setContextOption(MAX_WINDOW_SIZE, 16);
+
     sampleConsumer->setContextOption(DATA_ENTER_CNTX, 
                                     (ConsumerDataCallback)bind(&ConsumerCallback::processDataVideo, &cb_consumer, _1, _2));
     sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
@@ -135,6 +142,7 @@ static void sig_int(int num,
                               (ConsumerInterestCallback)bind(&ConsumerCallback::onRetx, &cb_consumer, _1, _2));
     sampleConsumer->setContextOption(INTEREST_EXPIRED, 
                               (ConsumerInterestCallback)bind(&ConsumerCallback::onExpr, &cb_consumer, _1, _2));
+
     std::cout <<"Video startFrameNum " << framenumber << std::endl;
     eventid = m_scheduler.scheduleEvent(time::milliseconds(interval), bind(&FrameConsumer::consume_video_thread, this, &cb_consumer, sampleConsumer));
   }
