@@ -121,7 +121,7 @@ private:
         size_t samplenumber = 0;
 
 //        ProducerCallback cb_producer;
-        std::cout << pro->prefix + "/" + pro->stream_id + "/" + pro->name +  "/streaminfo" << std::endl;
+//        std::cout << pro->prefix + "/" + pro->stream_id + "/" + pro->name +  "/streaminfo" << std::endl;
         Name videoName_streaminfo = Name(pro->prefix).append(pro->stream_id).append(pro->name +  "/streaminfo");
       /* streaminfoFrameProducer */
         streaminfoProducer = new Producer(videoName_streaminfo);

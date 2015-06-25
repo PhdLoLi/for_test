@@ -15,11 +15,23 @@
 namespace ndn {
 // Additional nested namespace could be used to prevent/limit name contentions
 
-  int times_video = 0;
-  int times_audio = 0;
  
   ConsumerCallback::ConsumerCallback()
   {
+    payload_v = 0;
+    payload_a = 0;
+    interest_s = 0;
+    interest_r = 0;
+    interest_r_v = 0;
+    interest_r_a = 0;
+    interest_retx = 0;
+    interest_expr = 0;
+    data_v = 0;
+    data_a = 0;
+    start_frame_v = 0;
+    start_frame_a = 0;
+    frame_cnt_v = 0;
+    frame_cnt_a = 0;
 //    std::cout << "Construction" << std::endl;
 //    player.playbin_appsrc_init();
 //    std::cout << "Construction Over" << std::endl;
@@ -38,9 +50,12 @@ namespace ndn {
   void
   ConsumerCallback::processDataVideo(Consumer& con, const Data& data) {
 //    std::cout << "Video Data Received! Name: " << data.getName().toUri() << std::endl;
-    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
+    interest_r_v_m.lock(); 
+//    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
     frame_v->addSegment(const_cast<Data&>(data));
     interest_r_v++;
+    interest_r++;
+    interest_r_v_m.unlock(); 
   }
 
   void
@@ -53,15 +68,18 @@ namespace ndn {
 
   void
   ConsumerCallback::pushQueueVideo() {
+    frame_cnt_v_m.lock();
+    printf("pushQueue Video Frame Counter: %d \n", frame_cnt_v);
     int bufferSize;
     std::vector<uint8_t> bufferVec;
     frame_v->getData(bufferVec, bufferSize);
 //    std::cout << "Video bufferSize: "  << std::dec << bufferSize << std::endl;
     if (bufferSize > 0) {
       payload_v += bufferSize;
+      frame_cnt_v++;
       player.h264_appsrc_data(bufferVec.data(), bufferSize);
-      times_video ++;
     } 
+    frame_cnt_v_m.unlock();
   }
 
   void
@@ -73,21 +91,21 @@ namespace ndn {
 //    std::cout << "Audio bufferSize: " << std::dec << bufferSize << std::endl;
     if (bufferSize > 0) {
       payload_a += bufferSize;
+      frame_cnt_a++;
       player.h264_appsrc_data_audio(bufferVec.data(), bufferSize);
-      times_audio ++;
     } 
   }
 
   void
   ConsumerCallback::processPayload(Consumer& con, const uint8_t* buffer, size_t bufferSize)
   {
-//    std::cout << "video times processPayload " << std::dec << times_video <<std::endl;
 //    std::cout << "video Size:" << std::dec << bufferSize <<std::endl;
 //    std::cout << "video bufferSize " << bufferSize <<std::endl;
 //    std::cout << "@buffer " << &buffer <<std::endl;
+  
     payload_v += bufferSize;
     player.h264_appsrc_data(buffer, bufferSize);
-    times_video ++;
+    interest_r++;
     interest_r_v++;
 //    std::cout << "processPayload video over " << std::endl;
   }
@@ -95,14 +113,20 @@ namespace ndn {
   void
   ConsumerCallback::processPayloadAudio(Consumer& con, const uint8_t* buffer, size_t bufferSize)
   {
-//    std::cout << "audio times processPayload " << std::dec << times_audio <<std::endl;
-//    std::cout << "audio Size:" << std::dec << bufferSize <<std::endl;
-//    std::cout << "audio bufferSize " << bufferSize <<std::endl;
-//    std::cout << "@buffer " << &buffer <<std::endl;
+
+    interest_r_a_m.lock();
+    Name suffix;
+    con.getContextOption(SUFFIX, suffix);
+    int frameNumber = std::stoi(suffix.get(0).toUri());
+
+    printf("Audio Data received! Frame: %d\n", frameNumber);
     payload_a += bufferSize;
     player.h264_appsrc_data_audio(buffer, bufferSize);
-    times_audio ++;
+    interest_r++;
     interest_r_a++;
+    frame_cnt_a++;
+
+    interest_r_a_m.unlock();
 //    std::cout << "processPayload audio over " << std::endl;
   }
   
@@ -167,7 +191,9 @@ namespace ndn {
   void
   ConsumerCallback::processLeavingInterest(Consumer& con, Interest& interest)
   {
+    interest_s_m.lock();
     interest_s ++;
+    interest_s_m.unlock();
 //   std::cout << "LEAVES " << interest.toUri() << std::endl;
 //    std::cout << "LEAVES name " << interest.getName() << std::endl;
   }  
@@ -175,14 +201,18 @@ namespace ndn {
   void
   ConsumerCallback::onRetx(Consumer& con, Interest& interest)
   {
+    interest_retx_m.lock();
     interest_retx ++;
     std::cout << "Retransmitted " << interest.getName() << std::endl;
+    interest_retx_m.unlock();
   }
 
   void
   ConsumerCallback::onExpr(Consumer& con, Interest& interest)
   {
+    interest_expr_m.lock();
     interest_expr ++;
     std::cout << "Expired " << interest.getName() << std::endl;
+    interest_expr_m.unlock();
   }
 } // namespace ndn

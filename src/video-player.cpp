@@ -20,8 +20,8 @@ namespace ndn {
     VideoAudio *va =  &s_va;
     App *app = &(va->v_app);
     app->capstr = streaminfo; 
-    pthread_mutex_init(&(app->count_mutex), NULL);
-    pthread_cond_init (&(app->count_cond), NULL);
+//    pthread_mutex_init(&(app->count_mutex), NULL);
+//    pthread_cond_init (&(app->count_cond), NULL);
 //    std::cout << "Video streaminfo " << streaminfo << std::endl;
 //    pthread_t thread; 
 //    int rc;
@@ -35,8 +35,8 @@ namespace ndn {
     VideoAudio *va =  &s_va;
     App *app = &(va->a_app);
     app->capstr = streaminfo; 
-    pthread_mutex_init(&(app->count_mutex), NULL);
-    pthread_cond_init (&(app->count_cond), NULL);
+//    pthread_mutex_init(&(app->count_mutex), NULL);
+//    pthread_cond_init (&(app->count_cond), NULL);
 //    std::cout << "Audio streaminfo " << streaminfo << std::endl;
 //    pthread_t thread; 
 //    int rc;
@@ -57,14 +57,18 @@ namespace ndn {
     memcpy (bufferTmp, buffer, bufferSize);
     dataNode.length = bufferSize;
     dataNode.data = (guint8 *) bufferTmp;
+
+    app->queue_m.lock();
     (app->dataQue).push_back(dataNode);
+    app->queue_m.unlock();
+
 //    std::cout << "HERE@" << std::endl;
 //    std::cout << "videoQueueSize " << (app->dataQue).size() <<std::endl;
 //    t_video ++;
-    pthread_mutex_lock(&(app->count_mutex));
-    if((app->dataQue).size() > 0)
-       pthread_cond_signal(&(app->count_cond));
-    pthread_mutex_unlock(&(app->count_mutex));
+//    pthread_mutex_lock(&(app->count_mutex));
+//    if((app->dataQue).size() > 0)
+//       pthread_cond_signal(&(app->count_cond));
+//    pthread_mutex_unlock(&(app->count_mutex));
 
 //    std::cout << "CP Video Done! " << bufferSize <<std::endl;
   }
@@ -79,13 +83,17 @@ namespace ndn {
     memcpy (bufferTmp, buffer, bufferSize);
     dataNode.length = bufferSize;
     dataNode.data = (guint8 *) bufferTmp;
+
+    app->queue_m.lock();
     (app->dataQue).push_back(dataNode);
+    app->queue_m.unlock();
+
 //    std::cout << "audioQueueSize " << (app->dataQue).size() <<std::endl;
 //    t_audio ++;
-    pthread_mutex_lock(&(app->count_mutex));
-    if((app->dataQue).size() > 0)
-       pthread_cond_signal(&(app->count_cond));
-    pthread_mutex_unlock(&(app->count_mutex));
+//    pthread_mutex_lock(&(app->count_mutex));
+//    if((app->dataQue).size() > 0)
+//       pthread_cond_signal(&(app->count_cond));
+//    pthread_mutex_unlock(&(app->count_mutex));
 
 //    std::cout << "CP Audio Done! " << bufferSize <<std::endl;
   }

@@ -61,7 +61,7 @@ namespace ndn{
     
     int framenumber;
     EventId eventid;
-    int interval;
+    time::nanoseconds interval;
 //    int v_framenumber;
 
     FrameConsumer();

@@ -96,18 +96,29 @@ namespace ndn {
     VideoFrame *frame_v;
     VideoFrame *frame_a;
     VideoPlayer player;
-    gsize payload_v = 0;
-    gsize payload_a = 0;
-    gsize interest_s = 0;
-    gsize interest_r = 0;
-    gsize interest_r_v = 0;
-    gsize interest_r_a = 0;
-    gsize interest_retx = 0;
-    gsize interest_expr = 0;
-    gsize data_v = 0;
-    gsize data_a = 0;
-    gsize start_frame_v = 0;
-    gsize start_frame_a = 0;
+    gsize payload_v;
+    gsize payload_a;
+    gsize interest_s;
+    gsize interest_r;
+    gsize interest_r_v;
+    gsize interest_r_a;
+    gsize interest_retx;
+    gsize interest_expr;
+    gsize data_v;
+    gsize data_a;
+    gsize start_frame_v;
+    gsize start_frame_a;
+    int frame_cnt_v;
+    int frame_cnt_a;
+
+    boost::mutex frame_cnt_v_m;
+    boost::mutex frame_cnt_a_m;
+    boost::mutex interest_s_m;
+    boost::mutex interest_r_m;
+    boost::mutex interest_r_v_m;
+    boost::mutex interest_r_a_m;
+    boost::mutex interest_retx_m;
+    boost::mutex interest_expr_m;
   };
 
 } // namespace ndn

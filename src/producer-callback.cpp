@@ -117,8 +117,8 @@ namespace ndn {
   void
   ProducerCallback::processOutgoingStreaminfo(Producer& pro, const Data& data)
   {
+  //  printf("OutgoingStreaminfo Name: %s\n", data.getName().toUri().c_str());
   //  interest_outgoing ++;
-    std::cout << "OutgoingStreaminfo Name: " << data.getName() << std::endl;
   //    std::cout << data.getFinalBlockId() << std::endl;
   }
  
