@@ -1,4 +1,3 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
  * Copyright (c) 2014 Regents of the University of California.
  *
@@ -98,7 +97,7 @@ namespace ndn {
   ProducerCallback::processIncomingInterest(Producer& pro, const Interest& interest)
   {
     interest_incoming ++;
-//    std::cout << "processIncomingInterest " << interest.getName() << std::endl;
+    std::cout << "processIncomingInterest " << interest.getName() << std::endl;
 //    std::string type = interest.getName().get(-2).toUri();
 //    std::string streaminfo;
 //    std::cout << "processIncomingInterest type " << type << " streaminfo" << streaminfo << std::endl;

@@ -122,7 +122,7 @@ static void sig_int(int num,
     sampleConsumer->setContextOption(CONTENT_RETRIEVED, 
                           (ConsumerContentCallback)bind(&ConsumerCallback::processPayloadAudio, &cb_consumer, _1, _2, _3));
     sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-    sampleConsumer->setContextOption(INTEREST_LIFETIME, 500);
+    sampleConsumer->setContextOption(INTEREST_LIFETIME, 2000);
 //    sampleConsumer->setContextOption(INTEREST_RETX,5); //Retransmitted Attempted Time.
 //    sampleConsumer->setContextOption(MIN_WINDOW_SIZE, 1);
     sampleConsumer->setContextOption(INTEREST_LEAVE_CNTX, 
@@ -160,7 +160,7 @@ static void sig_int(int num,
     sampleConsumer->setContextOption(DATA_ENTER_CNTX, 
                                     (ConsumerDataCallback)bind(&ConsumerCallback::processDataVideo, &cb_consumer, _1, _2));
     sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-    sampleConsumer->setContextOption(INTEREST_LIFETIME, 500);
+    sampleConsumer->setContextOption(INTEREST_LIFETIME, 2000);
     sampleConsumer->setContextOption(INTEREST_LEAVE_CNTX, 
                               (ConsumerInterestCallback)bind(&ConsumerCallback::processLeavingInterest, &cb_consumer, _1, _2));
     sampleConsumer->setContextOption(INTEREST_RETRANSMIT, 
@@ -220,7 +220,7 @@ static void sig_int(int num,
       else
         audioinfoConsumer->consume(Name(""));
 
-//      sleep(1); // because consume() is non-blocking
+      sleep(1); // because consume() is non-blocking
       std::cout << "consume whole start!" <<std::endl;
 /*      
       Verificator* verificator = new Verificator();

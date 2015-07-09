@@ -1,4 +1,3 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
  * Copyright (c) 2014 Regents of the University of California.
  *
@@ -119,7 +118,7 @@ namespace ndn {
     con.getContextOption(SUFFIX, suffix);
     int frameNumber = std::stoi(suffix.get(0).toUri());
 
-    printf("Audio Data received! Frame: %d\n", frameNumber);
+    printf("Audio Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_a);
     payload_a += bufferSize;
     player.h264_appsrc_data_audio(buffer, bufferSize);
     interest_r++;
