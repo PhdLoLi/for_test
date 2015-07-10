@@ -9,6 +9,8 @@
 #include <ndn-cxx/contexts/face-helper.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
+#include <thread>
+#include <chrono>
 // Enclosing code in ndn simplifies coding (can also use `using namespace ndn`)
 namespace ndn {
 // Additional nested namespace could be used to prevent/limit name contentions
@@ -19,11 +21,11 @@ ConsumerCallback cb_consumer;
 
 
   //when control-c detected, doing the analysis 
-static void sig_int(int num,
-                    const boost::system::error_code& error,
-                    int signalNo,
-                    boost::asio::signal_set& signalSet,
-                    boost::asio::io_service& io)
+static void sig_int(int num)
+//                    const boost::system::error_code& error,
+//                    int signalNo,
+//                    boost::asio::signal_set& signalSet,
+//                    boost::asio::io_service& io)
   {
     time_t time_end = std::time(0);
     double seconds = difftime(time_end, time_start);
@@ -50,7 +52,7 @@ static void sig_int(int num,
     std::cout << "---------- OVER ----------  " << seconds <<" seconds" << std::endl;
 
     //v_fc.scheduler.cancelEvent(v_fc.eventid);
-    io.stop();
+//    io.stop();
 
     //signalSet.async_wait(bind(&sig_int, _1, _2, ref(signalSet), ref(io)));
     exit(num); 
@@ -70,15 +72,14 @@ static void sig_int(int num,
   }
   
   void consume_video_frame(ConsumerCallback* cb_consumer, Consumer* sampleConsumer, Name sampleSuffix) {
-      cb_consumer->initFrameVideo();
+//      cb_consumer->initFrameVideo();
       sampleConsumer->consume(sampleSuffix);
-      cb_consumer->pushQueueVideo();
+//      cb_consumer->pushQueueVideo();
   }
 
     void
     FrameConsumer::consume_audio_thread(Consumer* sampleConsumer)
     {
-
       printf("--------- Audio Consume Frame Number: %d ---------- start\n ", framenumber);
 //    con->cb->initFrameAudio();
       eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_audio_thread, this, sampleConsumer));
@@ -113,8 +114,8 @@ static void sig_int(int num,
     int samplerate = 441; //(cb_consumer.player).get_audio_rate();
 
     interval = time::nanoseconds(1000000 * time::microseconds(10)) / samplerate;
+    uint64_t interval_a = 1000000 / samplerate * 10000;
 
-    std::cout << "audio interval " << interval << std::endl;
     Name sampleName = Name(live_prefix).append(stream_id).append("audio").append("content");
     framenumber = cb_consumer.start_frame_a;
     Consumer* sampleConsumer; 
@@ -122,7 +123,7 @@ static void sig_int(int num,
     sampleConsumer->setContextOption(CONTENT_RETRIEVED, 
                           (ConsumerContentCallback)bind(&ConsumerCallback::processPayloadAudio, &cb_consumer, _1, _2, _3));
     sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-    sampleConsumer->setContextOption(INTEREST_LIFETIME, 2000);
+    sampleConsumer->setContextOption(INTEREST_LIFETIME, 500);
 //    sampleConsumer->setContextOption(INTEREST_RETX,5); //Retransmitted Attempted Time.
 //    sampleConsumer->setContextOption(MIN_WINDOW_SIZE, 1);
     sampleConsumer->setContextOption(INTEREST_LEAVE_CNTX, 
@@ -135,12 +136,21 @@ static void sig_int(int num,
 //                              (ConsumerDataCallback)bind(&ConsumerCallback::processData, &cb_consumer, _1, _2));
 //      sampleConsumer->setContextOption(DATA_TO_VERIFY,consume_audio_thread
 //            (DataVerificationCallback)bind(&Verificator::onPacket, verificator, _1));
-    std::cout <<"Audio startFrameNum " << framenumber << std::endl;
+    printf("Audio starFrameNumber: %d interval_a: %llu\n", framenumber, interval_a);
 //    m_scheduler.scheduleEvent(time::milliseconds(0),
 //                              [this] () {
 //                                std::cout << "OKKKKK" << std::endl;
 //                              });
-    eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_audio_thread, this, sampleConsumer));
+//    eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_audio_thread, this, sampleConsumer));
+    while (1) {
+      printf("--------- Audio Consume Frame Number: %d ---------- start\n ", framenumber);
+      Name sampleSuffix(std::to_string(framenumber));
+      sampleConsumer->consume(sampleSuffix);
+//      boost::thread(consume_audio_frame, sampleConsumer, sampleSuffix);
+      printf("--------- Audio Consume Frame Number: %d ---------- over\n", framenumber);
+      framenumber++;
+//      std::this_thread::sleep_for(std::chrono::nanoseconds(interval_a));
+    }
   }
 
   void 
@@ -148,19 +158,23 @@ static void sig_int(int num,
     int samplerate = 30; //(cb_consumer.player).get_audio_rate();
 //    time::nanoseconds interval_v = time::nanoseconds(1000000*timeWindow) / nInterests; 
     interval = time::nanoseconds(1000000 * time::microseconds(1)) / samplerate;
-    std::cout << "video interval " << interval << std::endl;
+    uint64_t interval_v = 1000000 / samplerate * 1000;
 
     Name sampleName = Name(live_prefix).append(stream_id).append("video").append("content");
     framenumber = cb_consumer.start_frame_v;
     Consumer* sampleConsumer; 
-    sampleConsumer = new Consumer(sampleName, UDR);
+    sampleConsumer = new Consumer(sampleName, RDR);
 
-    sampleConsumer->setContextOption(MAX_WINDOW_SIZE, 16);
+//    sampleConsumer->setContextOption(MAX_WINDOW_SIZE, 16);
+
+    sampleConsumer->setContextOption(CONTENT_RETRIEVED, 
+                          (ConsumerContentCallback)bind(&ConsumerCallback::processPayload, &cb_consumer, _1, _2, _3));
 
     sampleConsumer->setContextOption(DATA_ENTER_CNTX, 
-                                    (ConsumerDataCallback)bind(&ConsumerCallback::processDataVideo, &cb_consumer, _1, _2));
+                                    (ConsumerDataCallback)bind(&ConsumerCallback::processData, &cb_consumer, _1, _2));
+
     sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-    sampleConsumer->setContextOption(INTEREST_LIFETIME, 2000);
+    sampleConsumer->setContextOption(INTEREST_LIFETIME, 500);
     sampleConsumer->setContextOption(INTEREST_LEAVE_CNTX, 
                               (ConsumerInterestCallback)bind(&ConsumerCallback::processLeavingInterest, &cb_consumer, _1, _2));
     sampleConsumer->setContextOption(INTEREST_RETRANSMIT, 
@@ -168,8 +182,17 @@ static void sig_int(int num,
     sampleConsumer->setContextOption(INTEREST_EXPIRED, 
                               (ConsumerInterestCallback)bind(&ConsumerCallback::onExpr, &cb_consumer, _1, _2));
 
-    std::cout <<"Video startFrameNum " << framenumber << std::endl;
-    eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_video_thread, this, &cb_consumer, sampleConsumer));
+    printf("Video startFrameNumber: %d interval_v: %llu\n", framenumber, interval_v);
+//    eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_video_thread, this, &cb_consumer, sampleConsumer));
+    while(1) {
+      printf("--------- Video Consume Frame Number: %d ---------- start\n", framenumber);
+      Name sampleSuffix(std::to_string(framenumber));
+      sampleConsumer->consume(sampleSuffix);
+//      boost::thread(consume_video_frame, &cb_consumer, sampleConsumer, sampleSuffix);
+      printf("--------- Video Consume Frame Number: %d ---------- over\n", framenumber);
+      framenumber++;
+//      std::this_thread::sleep_for(std::chrono::nanoseconds(interval_v));
+    }
   }
 
   int
@@ -222,32 +245,38 @@ static void sig_int(int num,
 
       sleep(1); // because consume() is non-blocking
       std::cout << "consume whole start!" <<std::endl;
-/*      
+      /*      
       Verificator* verificator = new Verificator();
       Name videoName(live_prefix + "/video/content");
       */
 
-      // signal(SIGINT, sig_int);
-      boost::asio::signal_set terminationSignalSet(a_fc.m_ioService);
-      terminationSignalSet.add(SIGINT);
-      terminationSignalSet.add(SIGTERM);
-      terminationSignalSet.async_wait(bind(&sig_int, _2, _1, _2,
-                                           ref(terminationSignalSet), ref(a_fc.m_ioService)));
+      signal(SIGINT, sig_int);
+//      boost::asio::signal_set terminationSignalSet(a_fc.m_ioService);
+//      terminationSignalSet.add(SIGINT);
+//      terminationSignalSet.add(SIGTERM);
+//      terminationSignalSet.async_wait(bind(&sig_int, _2, _1, _2,
+//                                           ref(terminationSignalSet), ref(a_fc.m_ioService)));
 
       time_t time_start_0 = std::time(0);
 
       time_start = std::time(0);
       //audio frames consumer
-      a_fc.audioConsumeFrames(live_prefix, stream_id);
+
+//      std::thread(std::bind(&FrameConsumer::audioConsumeFrames, &a_fc, live_prefix, stream_id));
+      boost::thread(boost::bind(&FrameConsumer::audioConsumeFrames, &a_fc, live_prefix, stream_id));
+      boost::thread(boost::bind(&FrameConsumer::videoConsumeFrames, &v_fc, live_prefix, stream_id));
+
+//      a_fc.audioConsumeFrames(live_prefix, stream_id);
       //video consumer
-      v_fc.videoConsumeFrames(live_prefix, stream_id);
+//      v_fc.videoConsumeFrames(live_prefix, stream_id);
 
 //      time_t time_end_0  = std::time(0);
 //      std::cout << "After consume " << time_end_0 << std::endl;
 //      double seconds = difftime(time_end_0, time_start_0);
 //      std::cout << seconds << " seconds have passed" << std::endl;
 
-      a_fc.m_ioService.run();
+        sleep(10000000);
+//      a_fc.m_ioService.run();
     }
     catch(std::exception& e) {
       std::cerr << "ERROR: " << e.what() << std::endl;

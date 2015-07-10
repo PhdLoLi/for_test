@@ -1,3 +1,4 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
  * Copyright (c) 2014 Regents of the University of California.
  *
@@ -50,7 +51,7 @@ namespace ndn {
   ConsumerCallback::processDataVideo(Consumer& con, const Data& data) {
 //    std::cout << "Video Data Received! Name: " << data.getName().toUri() << std::endl;
     interest_r_v_m.lock(); 
-//    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
+    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
     frame_v->addSegment(const_cast<Data&>(data));
     interest_r_v++;
     interest_r++;
@@ -102,10 +103,18 @@ namespace ndn {
 //    std::cout << "video bufferSize " << bufferSize <<std::endl;
 //    std::cout << "@buffer " << &buffer <<std::endl;
   
+    frame_cnt_v_m.lock();
+
+    Name suffix;
+    con.getContextOption(SUFFIX, suffix);
+    int frameNumber = std::stoi(suffix.get(0).toUri());
+
+    printf("Video Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_v);
+
     payload_v += bufferSize;
     player.h264_appsrc_data(buffer, bufferSize);
-    interest_r++;
-    interest_r_v++;
+    frame_cnt_v++;
+    frame_cnt_v_m.unlock();
 //    std::cout << "processPayload video over " << std::endl;
   }
 
@@ -169,6 +178,7 @@ namespace ndn {
   ConsumerCallback::processData(Consumer& con, const Data& data)
   {
     interest_r++;
+    interest_r_v++;
     printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
   }
   
@@ -192,6 +202,7 @@ namespace ndn {
   {
     interest_s_m.lock();
     interest_s ++;
+    printf("Leaving Interest Name: %s\n", interest.toUri().c_str());
     interest_s_m.unlock();
 //   std::cout << "LEAVES " << interest.toUri() << std::endl;
 //    std::cout << "LEAVES name " << interest.getName() << std::endl;
