@@ -11,6 +11,9 @@
 #include "consumer-callback.hpp"
 #include <pthread.h>
 #include <ndn-cxx/security/validator.hpp>
+#include "threadpool.hpp"
+
+using namespace boost::threadpool;
 
 namespace ndn{
 
@@ -58,18 +61,36 @@ namespace ndn{
     shared_ptr<Face> m_face;
     boost::asio::io_service& m_ioService;
     Scheduler m_scheduler;
+    std::vector<Consumer *> m_consumers;
+    std::vector<boost::condition_variable> m_cons;
+    std::vector<boost::mutex> m_muts;
+    std::vector<bool> m_works;
+    uint64_t m_curr;
+    uint64_t m_interval;
     
     int framenumber;
     EventId eventid;
     time::nanoseconds interval;
+    std::chrono::high_resolution_clock::time_point start;
+
+
 //    int v_framenumber;
 
     FrameConsumer();
 
     void
-    audioConsumeFrames(std::string, std::string);
+    audioConsumeFrames();
     void
-    videoConsumeFrames(std::string, std::string);
+    videoConsumeFrames();
+    void
+    setup_audio(std::string, std::string);
+    void
+    setup_video(std::string, std::string);
+    void
+    start_timer() {
+      start = std::chrono::high_resolution_clock::now();
+    }
+
 
    private:
     void

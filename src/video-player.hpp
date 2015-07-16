@@ -19,6 +19,7 @@
 #include <gst/app/gstappsrc.h>
 #include <gst/app/gstappsink.h>
 #include <ndn-cxx/contexts/consumer-context.hpp>
+#include "threadpool.hpp"
 
 namespace ndn {
 
@@ -27,6 +28,8 @@ namespace ndn {
     public:
 
       VideoPlayer();
+      ~VideoPlayer();
+
       void
       h264_appsrc_init ();
       void
@@ -43,12 +46,20 @@ namespace ndn {
       int get_video_rate();
       int get_audio_rate();
 
+      boost::condition_variable rate_con;
+      boost::mutex rate_mut;
+      bool rate_ready;
+      boost::thread *pipe_thread;
+
     private:
 
       struct DataNode
       {
         gsize length;
         guint8 *data;
+        DataNode(gsize len, guint8 *d) : length(len), data(d)
+        {
+        }
       };
 
       struct App
@@ -211,11 +222,10 @@ namespace ndn {
        * Lijig Wang
        * 2014/12/15 
        */
-      static void
-      *h264_capture_thread (void * threadData)
+      void
+      h264_capture_thread(VideoAudio *threadData)
       {
-        VideoAudio * va;
-        va = (VideoAudio *) threadData;
+        VideoAudio *va = threadData;
 
         GstBus *bus;
         GMainLoop *loop;
@@ -276,7 +286,7 @@ namespace ndn {
         GstStructure *str_audio = gst_caps_get_structure (caps_audio, 0);
         int samplerate;
         gst_structure_get_int (str_audio, "rate", &samplerate);
-        audio->rate = samplerate; //FIX ME
+        audio->rate = samplerate / 1000; //FIX ME
 //        audio_samplerate = samplerate;
         std::cout << "samplerate " << samplerate << std::endl;
 
@@ -302,6 +312,13 @@ namespace ndn {
         gst_bus_add_watch (bus, (GstBusFunc)bus_call, pipeline);
         gst_object_unref (bus);
         /* play */
+
+        rate_mut.lock();
+        rate_ready = true;
+        rate_con.notify_all();
+        rate_mut.unlock();
+
+        std::cout << "Gstreamer Pipeline Init OK!" <<std::endl;
 
         gst_element_set_state (pipeline, GST_STATE_PAUSED); 
         gst_element_set_state (pipeline, GST_STATE_PLAYING);

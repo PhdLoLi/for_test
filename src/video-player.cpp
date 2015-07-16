@@ -10,8 +10,13 @@
 
 namespace ndn {
 
-  VideoPlayer::VideoPlayer()
+  VideoPlayer::VideoPlayer() : rate_ready(false)//, pipeline_pool(1)
   {
+  }
+
+  VideoPlayer::~VideoPlayer() 
+  {
+//    pipe_thread->join();
   }
 
   void
@@ -52,14 +57,14 @@ namespace ndn {
     App *app = &(va->v_app);
     /* get some vitals, this will be used to read data from the mmapped file and
      * feed it to appsrc. */
-    DataNode dataNode;
+//    DataNode dataNode;
     uint8_t* bufferTmp = new uint8_t[bufferSize];
-    memcpy (bufferTmp, buffer, bufferSize);
-    dataNode.length = bufferSize;
-    dataNode.data = (guint8 *) bufferTmp;
+    memcpy(bufferTmp, buffer, bufferSize);
+//    dataNode.length = bufferSize;
+//    dataNode.data =(guint8 *)bufferTmp;
 
     app->queue_m.lock();
-    (app->dataQue).push_back(dataNode);
+    (app->dataQue).push_back(DataNode(bufferSize, (guint8 *)bufferTmp));
     app->queue_m.unlock();
 
 //    std::cout << "HERE@" << std::endl;
@@ -78,14 +83,11 @@ namespace ndn {
   {
     VideoAudio *va = &s_va;
     App *app = &(va->a_app);
-    DataNode dataNode;
-   uint8_t* bufferTmp = new uint8_t[bufferSize];
+    uint8_t* bufferTmp = new uint8_t[bufferSize];
     memcpy (bufferTmp, buffer, bufferSize);
-    dataNode.length = bufferSize;
-    dataNode.data = (guint8 *) bufferTmp;
 
     app->queue_m.lock();
-    (app->dataQue).push_back(dataNode);
+    (app->dataQue).push_back(DataNode(bufferSize, (guint8 *)bufferTmp));
     app->queue_m.unlock();
 
 //    std::cout << "audioQueueSize " << (app->dataQue).size() <<std::endl;
@@ -106,10 +108,10 @@ namespace ndn {
   VideoPlayer::h264_appsrc_init()
   {
     VideoAudio *va = &s_va;
-    pthread_t thread; 
-    int rc;
+//    pthread_t thread; 
+//    int rc;
 //    std::thread meme (std::bind(&VideoPlayer::h264_capture_thread, this, va));
-    rc = pthread_create(&thread, NULL, h264_capture_thread , (void *)va);
+    pipe_thread = new boost::thread(boost::bind(&VideoPlayer::h264_capture_thread ,this, va));
 //    rc = pthread_create(&thread, NULL, h264_appsrc_thread ,(void *)va);
     std::cout << "h264_appsrc_init OK! " << std::endl;
   }

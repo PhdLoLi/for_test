@@ -162,13 +162,15 @@ private:
                           (ProducerInterestCallback)bind(&ProducerCallback::processInterest, &(pro->sampleCB), _1, _2));
         sampleProducer->attach();          
         
+        auto start = std::chrono::high_resolution_clock::now();
+
         do {
           g_signal_emit_by_name (pro->sink, "pull-sample", &sample);
           if (sample == NULL){
             g_print("Meet the EOS!\n");
             break;
             }
-          if ( samplenumber == 0)
+          if (samplenumber == 0)
           {
             caps = gst_sample_get_caps(sample);
             streaminfo = gst_caps_to_string(caps);
@@ -197,6 +199,11 @@ private:
 
 //          if( samplenumber % 100 != 0)
           sampleProducer->produce(sampleSuffix, (uint8_t *)map.data, map.size * sizeof(uint8_t));
+
+          auto finish = std::chrono::high_resolution_clock::now();
+//          printf("%s -- %llu ms\n", pro->name.c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
+          start = finish;
+
           samplenumber ++;
 //          if ( samplenumber > 250)
 //            break;

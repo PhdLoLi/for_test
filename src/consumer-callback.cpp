@@ -10,6 +10,7 @@
 #include <string>
 #include <pthread.h>
 #include <ctime>
+#include <chrono>
 
 // Enclosing code in ndn simplifies coding (can also use `using namespace ndn`)
 namespace ndn {
@@ -32,6 +33,10 @@ namespace ndn {
     start_frame_a = 0;
     frame_cnt_v = 0;
     frame_cnt_a = 0;
+    buffers_v.resize(VIDEO_SIZE, DataNode_G(0, NULL));
+    buffers_a.resize(AUDIO_SIZE, DataNode_G(0, NULL));
+    ready_v = false;
+    ready_a = false;
 //    std::cout << "Construction" << std::endl;
 //    player.playbin_appsrc_init();
 //    std::cout << "Construction Over" << std::endl;
@@ -104,6 +109,8 @@ namespace ndn {
 //    std::cout << "@buffer " << &buffer <<std::endl;
   
     frame_cnt_v_m.lock();
+    auto finish = std::chrono::high_resolution_clock::now();
+    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_v).count());
 
     Name suffix;
     con.getContextOption(SUFFIX, suffix);
@@ -112,8 +119,16 @@ namespace ndn {
     printf("Video Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_v);
 
     payload_v += bufferSize;
-    player.h264_appsrc_data(buffer, bufferSize);
+//    player.h264_appsrc_data(buffer, bufferSize);
     frame_cnt_v++;
+
+    con.setContextOption(SUFFIX, "empty");
+
+    mut_v.lock();
+    ready_v = true;
+    con_v.notify_all();
+    mut_v.unlock();
+
     frame_cnt_v_m.unlock();
 //    std::cout << "processPayload video over " << std::endl;
   }
@@ -123,16 +138,27 @@ namespace ndn {
   {
 
     interest_r_a_m.lock();
+
+    auto finish = std::chrono::high_resolution_clock::now();
+    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_a).count());
+
     Name suffix;
     con.getContextOption(SUFFIX, suffix);
     int frameNumber = std::stoi(suffix.get(0).toUri());
 
     printf("Audio Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_a);
     payload_a += bufferSize;
-    player.h264_appsrc_data_audio(buffer, bufferSize);
+//    player.h264_appsrc_data_audio(buffer, bufferSize);
     interest_r++;
     interest_r_a++;
     frame_cnt_a++;
+
+    con.setContextOption(SUFFIX, "empty");
+
+    mut_a.lock();
+    ready_a = true;
+    con_a.notify_all();
+    mut_a.unlock();
 
     interest_r_a_m.unlock();
 //    std::cout << "processPayload audio over " << std::endl;
@@ -177,9 +203,11 @@ namespace ndn {
   void
   ConsumerCallback::processData(Consumer& con, const Data& data)
   {
+    interest_r_m.lock();
     interest_r++;
     interest_r_v++;
     printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
+    interest_r_m.unlock();
   }
   
   bool
@@ -224,5 +252,17 @@ namespace ndn {
     interest_expr ++;
     std::cout << "Expired " << interest.getName() << std::endl;
     interest_expr_m.unlock();
+  }
+
+  void
+  ConsumerCallback::onRetx_info(Consumer& con, Interest& interest)
+  {
+    printf("Info Retransmission : %s\n", interest.getName().toUri().c_str());
+  }
+
+  void
+  ConsumerCallback::onExpr_info(Consumer& con, Interest& interest)
+  {
+    printf("Info Expiration : %s\n", interest.getName().toUri().c_str());
   }
 } // namespace ndn
