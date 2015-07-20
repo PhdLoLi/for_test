@@ -98,7 +98,7 @@ namespace ndn {
   ProducerCallback::processIncomingInterest(Producer& pro, const Interest& interest)
   {
     interest_incoming ++;
-    std::cout << "processIncomingInterest " << interest.getName() << std::endl;
+    printf("processIncomingInterest %s\n", interest.getName().toUri().c_str());
 //    std::string type = interest.getName().get(-2).toUri();
 //    std::string streaminfo;
 //    std::cout << "processIncomingInterest type " << type << " streaminfo" << streaminfo << std::endl;

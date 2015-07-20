@@ -62,10 +62,7 @@ namespace ndn{
     boost::asio::io_service& m_ioService;
     Scheduler m_scheduler;
     std::vector<Consumer *> m_consumers;
-    std::vector<boost::condition_variable> m_cons;
-    std::vector<boost::mutex> m_muts;
-    std::vector<bool> m_works;
-    uint64_t m_curr;
+    boost::mutex m_mut;
     uint64_t m_interval;
     
     int framenumber;
@@ -78,6 +75,10 @@ namespace ndn{
 
     FrameConsumer();
 
+    void 
+    consume_audio_frame(Consumer* sampleConsumer, Name sampleSuffix);
+    void 
+    consume_video_frame(Consumer* sampleConsumer, Name sampleSuffix);
     void
     audioConsumeFrames();
     void
@@ -90,14 +91,6 @@ namespace ndn{
     start_timer() {
       start = std::chrono::high_resolution_clock::now();
     }
-
-
-   private:
-    void
-    consume_audio_thread(Consumer* sampleConsumer);
-
-    void
-    consume_video_thread(ConsumerCallback* cb_consumer, Consumer* sampleConsumer);
   };
 }
 #endif

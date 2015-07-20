@@ -33,10 +33,14 @@ namespace ndn {
     start_frame_a = 0;
     frame_cnt_v = 0;
     frame_cnt_a = 0;
-    buffers_v.resize(VIDEO_SIZE, DataNode_G(0, NULL));
-    buffers_a.resize(AUDIO_SIZE, DataNode_G(0, NULL));
+    buffers_v.resize((VIDEO_SIZE * 2), DataNode_G(0, NULL));
+    buffers_a.resize((AUDIO_SIZE * 2), DataNode_G(0, NULL));
     ready_v = false;
     ready_a = false;
+    playback_v = 0;
+    playback_a = 0;
+    framenumber_v = 0;
+    framenumber_a = 0;
 //    std::cout << "Construction" << std::endl;
 //    player.playbin_appsrc_init();
 //    std::cout << "Construction Over" << std::endl;
@@ -56,7 +60,7 @@ namespace ndn {
   ConsumerCallback::processDataVideo(Consumer& con, const Data& data) {
 //    std::cout << "Video Data Received! Name: " << data.getName().toUri() << std::endl;
     interest_r_v_m.lock(); 
-    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
+//    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
     frame_v->addSegment(const_cast<Data&>(data));
     interest_r_v++;
     interest_r++;
@@ -109,8 +113,8 @@ namespace ndn {
 //    std::cout << "@buffer " << &buffer <<std::endl;
   
     frame_cnt_v_m.lock();
-    auto finish = std::chrono::high_resolution_clock::now();
-    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_v).count());
+//    auto finish = std::chrono::high_resolution_clock::now();
+//    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_v).count());
 
     Name suffix;
     con.getContextOption(SUFFIX, suffix);
@@ -119,18 +123,45 @@ namespace ndn {
     printf("Video Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_v);
 
     payload_v += bufferSize;
-//    player.h264_appsrc_data(buffer, bufferSize);
+    
     frame_cnt_v++;
 
-    con.setContextOption(SUFFIX, "empty");
+    if (buffers_v[frameNumber % (VIDEO_SIZE * 2)].data == NULL && buffers_v[frameNumber % (VIDEO_SIZE * 2)].length == 0) {
+      uint8_t* bufferTmp = new uint8_t[bufferSize];
+      memcpy(bufferTmp, buffer, bufferSize);
+      buffers_v[frameNumber % (VIDEO_SIZE * 2)].data = bufferTmp;
+      buffers_v[frameNumber % (VIDEO_SIZE * 2)].length = bufferSize;
+    } else {
+      printf("Shouldn't Happen!!!!! for VIDEO frameNumber : %d\n", frameNumber);
+    }
 
-    mut_v.lock();
-    ready_v = true;
-    con_v.notify_all();
-    mut_v.unlock();
+    // playback_v move data to playingback queue
+    while (playback_v <= framenumber_v && buffers_v[playback_v % (VIDEO_SIZE * 2)].data != NULL) {
+
+      player.h264_appsrc_data(buffers_v[playback_v % (VIDEO_SIZE * 2)].data, buffers_v[playback_v % (VIDEO_SIZE * 2)].length);
+      buffers_v[playback_v % (VIDEO_SIZE * 2)].data = NULL;
+      buffers_v[playback_v % (VIDEO_SIZE * 2)].length = 0;
+      playback_v++;
+
+    }
+
+//    if (framenumber_v > 0)
+//      suffix = Name(std::to_string(++framenumber_v));
+
+//    con.setContextOption(SUFFIX, Name("empty"));
+//
+//    mut_v.lock();
+//    ready_v = true;
+//    con_v.notify_all();
+//    mut_v.unlock();
 
     frame_cnt_v_m.unlock();
-//    std::cout << "processPayload video over " << std::endl;
+//    if (framenumber_v > 0) {
+//      printf("video suffix %s\n", suffix.toUri().c_str());
+//      con.consume(suffix);
+//      printf("video after consume suffix %s\n", suffix.toUri().c_str());
+//    }
+
   }
 
   void
@@ -139,8 +170,8 @@ namespace ndn {
 
     interest_r_a_m.lock();
 
-    auto finish = std::chrono::high_resolution_clock::now();
-    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_a).count());
+//    auto finish = std::chrono::high_resolution_clock::now();
+//    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_a).count());
 
     Name suffix;
     con.getContextOption(SUFFIX, suffix);
@@ -153,15 +184,41 @@ namespace ndn {
     interest_r_a++;
     frame_cnt_a++;
 
-    con.setContextOption(SUFFIX, "empty");
+//    con.setContextOption(SUFFIX, Name("empty"));
+//
+//    mut_a.lock();
+//    ready_a = true;
+//    con_a.notify_all();
+//    mut_a.unlock();
 
-    mut_a.lock();
-    ready_a = true;
-    con_a.notify_all();
-    mut_a.unlock();
+    if (buffers_a[frameNumber % (AUDIO_SIZE * 2)].data == NULL && buffers_a[frameNumber % (AUDIO_SIZE * 2)].length == 0) {
+      uint8_t* bufferTmp = new uint8_t[bufferSize];
+      memcpy(bufferTmp, buffer, bufferSize);
+      buffers_a[frameNumber % (AUDIO_SIZE * 2)].data = bufferTmp;
+      buffers_a[frameNumber % (AUDIO_SIZE * 2)].length = bufferSize;
+    } else {
+      printf("Shouldn't Happen!!!!! for AUDIO frameNumber : %d\n", frameNumber);
+    }
+
+    // playback_a move data to playingback queue
+    while (playback_a <= framenumber_a && buffers_a[playback_a % (AUDIO_SIZE * 2)].data != NULL) {
+
+      player.h264_appsrc_data_audio(buffers_a[playback_a % (AUDIO_SIZE * 2)].data, buffers_a[playback_a % (AUDIO_SIZE * 2)].length);
+      buffers_a[playback_a % (AUDIO_SIZE * 2)].data = NULL;
+      buffers_a[playback_a % (AUDIO_SIZE * 2)].length = 0;
+      playback_a++;
+    }
+
+//    if (framenumber_a > 0)
+//      suffix = Name(std::to_string(++framenumber_a));
 
     interest_r_a_m.unlock();
-//    std::cout << "processPayload audio over " << std::endl;
+//    if (framenumber_a > 0) {
+//      printf("audio suffix %s\n", suffix.toUri().c_str());
+//      con.consume(suffix);
+//      printf("audio after consume suffix %s\n", suffix.toUri().c_str());
+//    }
+
   }
   
   void
@@ -206,7 +263,7 @@ namespace ndn {
     interest_r_m.lock();
     interest_r++;
     interest_r_v++;
-    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
+//    printf("DATA IN CNTX Name: %s  FinalBlockId: %s\n", data.getName().toUri().c_str(), data.getFinalBlockId().toUri().c_str());
     interest_r_m.unlock();
   }
   
@@ -223,14 +280,14 @@ namespace ndn {
   void
   ConsumerCallback::processLeavingStreaminfo(Consumer& con, Interest& interest)
   {
-    std::cout << "LEAVES streaminfo name " << interest.getName() << std::endl;
+//    std::cout << "LEAVES streaminfo name " << interest.getName() << std::endl;
   }
   void
   ConsumerCallback::processLeavingInterest(Consumer& con, Interest& interest)
   {
     interest_s_m.lock();
     interest_s ++;
-    printf("Leaving Interest Name: %s\n", interest.toUri().c_str());
+//    printf("Leaving Interest Name: %s\n", interest.toUri().c_str());
     interest_s_m.unlock();
 //   std::cout << "LEAVES " << interest.toUri() << std::endl;
 //    std::cout << "LEAVES name " << interest.getName() << std::endl;

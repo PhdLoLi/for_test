@@ -161,6 +161,10 @@ namespace ndn {
     int frame_rate_a;
     bool ready_v;
     bool ready_a;
+    int playback_v;
+    int playback_a;
+    int framenumber_v;
+    int framenumber_a;
 
     boost::mutex frame_cnt_v_m;
     boost::mutex frame_cnt_a_m;

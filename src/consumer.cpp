@@ -62,102 +62,59 @@ static void sig_int(int num)
     : m_face(FaceHelper::getFace())
     , m_ioService(m_face->getIoService())
     , m_scheduler(m_ioService)
-    , m_curr(0)  
     , m_interval(0)
     , framenumber(0)
     , interval(0)
   {
   }
 
-  void consume_audio_frame(Consumer* sampleConsumer, Name sampleSuffix) {
+  void FrameConsumer::consume_audio_frame(Consumer* sampleConsumer, Name sampleSuffix) {
     sampleConsumer->consume(sampleSuffix);
+    while (1) {
+      auto start = std::chrono::high_resolution_clock::now();
+      m_mut.lock();
+      cb_consumer.framenumber_a++;
+      Name suffix = Name(std::to_string(cb_consumer.framenumber_a));
+      m_mut.unlock();
+      sampleConsumer->consume(suffix);
+      auto finish = std::chrono::high_resolution_clock::now();
+      printf("audio_suffix: %s finish %llu ms\n", suffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
+    }
   }
   
-  void consume_video_frame(ConsumerCallback* cb_consumer, Consumer* sampleConsumer, Name sampleSuffix) {
-//      cb_consumer->initFrameVideo();
-      sampleConsumer->consume(sampleSuffix);
-//      cb_consumer->pushQueueVideo();
+  void FrameConsumer::consume_video_frame(Consumer* sampleConsumer, Name sampleSuffix) {
+    sampleConsumer->consume(sampleSuffix);
+    while (1) {
+      auto start = std::chrono::high_resolution_clock::now();
+      m_mut.lock();
+      cb_consumer.framenumber_v++;
+      Name suffix = Name(std::to_string(cb_consumer.framenumber_v));
+      m_mut.unlock();
+      sampleConsumer->consume(suffix);
+      auto finish = std::chrono::high_resolution_clock::now();
+      printf("video_suffix: %s finish %llu ms\n", suffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
+    }
   }
-
-    void
-    FrameConsumer::consume_audio_thread(Consumer* sampleConsumer)
-    {
-      printf("--------- Audio Consume Frame Number: %d ---------- start\n ", framenumber);
-//    con->cb->initFrameAudio();
-      eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_audio_thread, this, sampleConsumer));
-//      std::cout << "Inside Audio Thread " << framenumber << std::endl;
-      Name sampleSuffix(std::to_string(framenumber++));
-      boost::thread(consume_audio_frame, sampleConsumer, sampleSuffix);
-//      consume_audio_frame(sampleConsumer, sampleSuffix);
-      printf("--------- Audio Consume Frame Number: %d ---------- over\n", framenumber - 1);
-//    con->cb->initFrameAudio();
-//    con->cb->pushQueueAudio();
-//      std::cout << "Audio Frame " << framenumber - 1 << " Over!" << std::endl;
-    }
-
-    void
-    FrameConsumer::consume_video_thread(ConsumerCallback* cb_consumer, Consumer* sampleConsumer)
-    {
-      printf("--------- Video Consume Frame Number: %d ---------- start\n", framenumber);
-
-      eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_video_thread, this, cb_consumer, sampleConsumer));
-//      std::cout << "Inside Video Thread " << framenumber << std::endl;
-      Name sampleSuffix(std::to_string(framenumber++));
-
-      boost::thread(consume_video_frame, cb_consumer, sampleConsumer, sampleSuffix);
-//      consume_video_frame(cb_consumer, sampleConsumer, sampleSuffix);
-
-      printf("--------- Video Consume Frame Number: %d ---------- over\n", framenumber - 1);
-//      std::cout << "Video Frame " << framenumber - 1 << " Over!" << std::endl;
-    }
 
   void 
   FrameConsumer::audioConsumeFrames() {
 
     pool tp_audio(AUDIO_SIZE);
 //    pool tp_audio(AUDIO_SIZE);
-    while (framenumber < AUDIO_SIZE) {
+    while (cb_consumer.framenumber_a < AUDIO_SIZE) {
+      cb_consumer.framenumber_a++;
 //      std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "ns\n";
 //      start = finish;
-      Name sampleSuffix(std::to_string(framenumber));
+      Name sampleSuffix(std::to_string(cb_consumer.framenumber_a));
       cb_consumer.start_timer_audio();
-//      m_consumers[con_num]->consume(sampleSuffix);
-//      sampleConsumer->consume(sampleSuffix);
-      int i;
-      for (i = 0; i < AUDIO_SIZE; i++) {
-        Name suffix;
-        m_consumers[i]->getContextOption(SUFFIX, suffix);
-        if (suffix.get(0).toUri() == "empty"){
-          break;
-        }
-      }
 
-      if (i == AUDIO_SIZE) {
-        boost::unique_lock<boost::mutex> lock(cb_consumer.mut_a);
-        cb_consumer.ready_a = false;
-        while(!cb_consumer.ready_a)
-        {
-          printf("AUDIO I'm waiting should NOT happen! framenumber : %d \n", framenumber);
-          cb_consumer.con_a.wait(lock);
-          printf("AUDIO waiting Over! framenumber : %d \n", framenumber);
-        }
-
-        for (i = 0; i < AUDIO_SIZE; i++) {
-          Name suffix;
-          m_consumers[i]->getContextOption(SUFFIX, suffix);
-          if (suffix.get(0).toUri() == "empty"){
-            break;
-          }
-        }
-      }
-
-      int con_num = i;
-      printf("--------- Audio Consume Frame Number: %d con_num: %d ---------- handle\n", framenumber, con_num);
-      tp_audio.schedule(boost::bind(consume_audio_frame, m_consumers[con_num], sampleSuffix));
+      int con_num = cb_consumer.framenumber_a % AUDIO_SIZE;
+//      printf("--------- Audio Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_a, con_num);
+      tp_audio.schedule(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
 //      boost::thread(consume_audio_frame, m_consumers[con_num], sampleSuffix);
-      framenumber++;
       std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
     }
+    tp_audio.wait();
   }
 
   void 
@@ -166,49 +123,48 @@ static void sig_int(int num)
     pool tp_video(VIDEO_SIZE);
 //    pool tp_video(VIDEO_SIZE);
 //    eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_video_thread, this, &cb_consumer, sampleConsumer));
-    while(framenumber < VIDEO_SIZE) {
-//      auto finish = std::chrono::high_resolution_clock::now();
-//      printf("%llu ns\n", std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count());
+    while(cb_consumer.framenumber_v < VIDEO_SIZE) {
 //      start = finish;
-      Name sampleSuffix(std::to_string(framenumber));
+      cb_consumer.framenumber_v++;
+      Name sampleSuffix(std::to_string(cb_consumer.framenumber_v));
       cb_consumer.start_timer_video();
 //      m_consumers[con_num]->consume(sampleSuffix);
 
-      int i;
-      for (i = 0; i < VIDEO_SIZE; i++) {
-        Name suffix;
-        m_consumers[i]->getContextOption(SUFFIX, suffix);
-        if (suffix.get(0).toUri() == "empty"){
-          break;
-        }
-      }
+//      int i;
+//      for (i = 0; i < VIDEO_SIZE; i++) {
+//        Name suffix;
+//        m_consumers[i]->getContextOption(SUFFIX, suffix);
+//        if (suffix.get(0).toUri() == "empty"){
+//          break;
+//        }
+//      }
+//
+//      if (i == VIDEO_SIZE) {
+//        boost::unique_lock<boost::mutex> lock(cb_consumer.mut_v);
+//        cb_consumer.ready_v = false;
+//        while(!cb_consumer.ready_v)
+//        {
+//          printf("VIDEO I'm waiting should NOT happen! cb_consumer.framenumber_v : %d \n", cb_consumer.framenumber_v);
+//          cb_consumer.con_v.wait(lock);
+//          printf("VIDEO waiting Over! cb_consumer.framenumber_v : %d \n", cb_consumer.framenumber_v);
+//        }
+//
+//        for (i = 0; i < VIDEO_SIZE; i++) {
+//          Name suffix;
+//          m_consumers[i]->getContextOption(SUFFIX, suffix);
+//          if (suffix.get(0).toUri() == "empty"){
+//            break;
+//          }
+//        }
+//      }
 
-      if (i == VIDEO_SIZE) {
-        boost::unique_lock<boost::mutex> lock(cb_consumer.mut_v);
-        cb_consumer.ready_v = false;
-        while(!cb_consumer.ready_v)
-        {
-          printf("VIDEO I'm waiting should NOT happen! framenumber : %d \n", framenumber);
-          cb_consumer.con_v.wait(lock);
-          printf("VIDEO waiting Over! framenumber : %d \n", framenumber);
-        }
-
-        for (i = 0; i < VIDEO_SIZE; i++) {
-          Name suffix;
-          m_consumers[i]->getContextOption(SUFFIX, suffix);
-          if (suffix.get(0).toUri() == "empty"){
-            break;
-          }
-        }
-      }
-
-      int con_num = i;
-      printf("--------- Video Consume Frame Number: %d con_num: %d ---------- handle\n", framenumber, con_num);
-      tp_video.schedule(boost::bind(consume_audio_frame, m_consumers[con_num], sampleSuffix));
+      int con_num = cb_consumer.framenumber_v % VIDEO_SIZE;
+      printf("--------- Video Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_v, con_num);
+      tp_video.schedule(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
 //      boost::thread(consume_audio_frame, m_consumers[con_num], sampleSuffix);
-      framenumber++;
       std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
     }
+    tp_video.wait();
   }
 
   void
@@ -244,12 +200,15 @@ static void sig_int(int num)
       sampleConsumer->setContextOption(INTEREST_EXPIRED, 
                                 (ConsumerInterestCallback)bind(&ConsumerCallback::onExpr, &cb_consumer, _1, _2));
 
-      sampleConsumer->setContextOption(SUFFIX, "empty");
+      sampleConsumer->setContextOption(SUFFIX, Name("empty"));
   //    sampleConsumer->setContextOption(DATA_ENTER_CNTX, 
   //                              (ConsumerDataCallback)bind(&ConsumerCallback::processData, &cb_consumer, _1, _2));
 
       m_consumers.push_back(sampleConsumer);
     }
+
+    cb_consumer.start_timer_audio();
+    m_consumers[0]->consume("0");
 
     printf("m_consumers_audio size: %lu\n", m_consumers.size());
   }
@@ -287,10 +246,13 @@ static void sig_int(int num)
       sampleConsumer->setContextOption(INTEREST_EXPIRED, 
                                 (ConsumerInterestCallback)bind(&ConsumerCallback::onExpr, &cb_consumer, _1, _2));
 
-      sampleConsumer->setContextOption(SUFFIX, "empty");
+      sampleConsumer->setContextOption(SUFFIX, Name("empty"));
 
       m_consumers.push_back(sampleConsumer);
     }
+ 
+    cb_consumer.start_timer_video();
+    m_consumers[0]->consume("0");
     
     printf("m_consumers_video size: %lu\n", m_consumers.size());
   }
@@ -328,10 +290,7 @@ static void sig_int(int num)
       videoinfoConsumer->setContextOption(INTEREST_EXPIRED, 
         (ConsumerInterestCallback)bind(&ConsumerCallback::onExpr_info, &cb_consumer, _1, _2));
 
-      if(argc > 1)
-        videoinfoConsumer->consume(Name(argv[1]));
-      else
-        videoinfoConsumer->consume(Name("0"));
+      videoinfoConsumer->consume(Name("0"));
 
       Name audioinfoName = Name(live_prefix).append(stream_id).append("audio").append("streaminfo");
       Consumer* audioinfoConsumer = new Consumer(audioinfoName, RDR);
@@ -348,10 +307,10 @@ static void sig_int(int num)
       audioinfoConsumer->setContextOption(INTEREST_EXPIRED, 
         (ConsumerInterestCallback)bind(&ConsumerCallback::onExpr_info, &cb_consumer, _1, _2));
 
-      if(argc > 1)
-        audioinfoConsumer->consume(Name(argv[1]));
-      else
-        audioinfoConsumer->consume(Name("0"));
+      audioinfoConsumer->consume(Name("0"));
+
+      a_fc.setup_audio(live_prefix, stream_id);      
+      v_fc.setup_video(live_prefix, stream_id);      
 
 //      std::string streaminfo_video = "video/x-h264, codec_data=(buffer)01640014ffe1001967640014acd94141fb0110000003001000000303c8f142996001000468efbcb0, stream-format=(string)avc, alignment=(string)au, level=(string)2, profile=(string)high, width=(int)320, height=(int)240, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, parsed=(boolean)true";
 //      
@@ -361,7 +320,9 @@ static void sig_int(int num)
 //      cb_consumer.player.get_streaminfo_audio(streaminfo_audio);
 
 //      sleep(1); // because consume() is non-blocking
-      cb_consumer.wait_rate();
+
+       
+//      cb_consumer.wait_rate();
 
       auto finish = std::chrono::high_resolution_clock::now();
       printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_info).count());
@@ -387,11 +348,7 @@ static void sig_int(int num)
       //audio frames consumer
 
 //      std::thread(std::bind(&FrameConsumer::audioConsumeFrames, &a_fc, live_prefix, stream_id));
-      a_fc.setup_audio(live_prefix, stream_id);      
-      v_fc.setup_video(live_prefix, stream_id);      
-      a_fc.start_timer();
       boost::thread(boost::bind(&FrameConsumer::audioConsumeFrames, &a_fc));
-      v_fc.start_timer();
       boost::thread(boost::bind(&FrameConsumer::videoConsumeFrames, &v_fc));
 
 //      a_fc.audioConsumeFrames(live_prefix, stream_id);
