@@ -69,7 +69,10 @@ static void sig_int(int num)
   }
 
   void FrameConsumer::consume_audio_frame(Consumer* sampleConsumer, Name sampleSuffix) {
+    auto start = std::chrono::high_resolution_clock::now();
     sampleConsumer->consume(sampleSuffix);
+    auto finish = std::chrono::high_resolution_clock::now();
+    printf("audio_suffix: %s finish %llu ms\n", sampleSuffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
     while (1) {
       auto start = std::chrono::high_resolution_clock::now();
       m_mut.lock();
@@ -83,7 +86,10 @@ static void sig_int(int num)
   }
   
   void FrameConsumer::consume_video_frame(Consumer* sampleConsumer, Name sampleSuffix) {
+    auto start = std::chrono::high_resolution_clock::now();
     sampleConsumer->consume(sampleSuffix);
+    auto finish = std::chrono::high_resolution_clock::now();
+    printf("video_suffix: %s finish %llu ms\n", sampleSuffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
     while (1) {
       auto start = std::chrono::high_resolution_clock::now();
       m_mut.lock();
@@ -109,10 +115,10 @@ static void sig_int(int num)
       cb_consumer.start_timer_audio();
 
       int con_num = cb_consumer.framenumber_a % AUDIO_SIZE;
-//      printf("--------- Audio Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_a, con_num);
+      printf("--------- Audio Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_a, con_num);
       tp_audio.schedule(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
 //      boost::thread(consume_audio_frame, m_consumers[con_num], sampleSuffix);
-      std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
+//      std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
     }
     tp_audio.wait();
   }
@@ -161,8 +167,8 @@ static void sig_int(int num)
       int con_num = cb_consumer.framenumber_v % VIDEO_SIZE;
       printf("--------- Video Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_v, con_num);
       tp_video.schedule(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
-//      boost::thread(consume_audio_frame, m_consumers[con_num], sampleSuffix);
-      std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
+//      boost::thread(consume_video_frame, m_consumers[con_num], sampleSuffix);
+//      std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
     }
     tp_video.wait();
   }
@@ -187,8 +193,10 @@ static void sig_int(int num)
                             (ConsumerContentCallback)bind(&ConsumerCallback::processPayloadAudio, &cb_consumer, _1, _2, _3));
 
       sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-      sampleConsumer->setContextOption(INTEREST_LIFETIME, 500);
-  //    sampleConsumer->setContextOption(INTEREST_RETX,5); //Retransmitted Attempted Time.
+      sampleConsumer->setContextOption(INTEREST_LIFETIME, 250);
+      // retransmission time is 2
+//      sampleConsumer->setContextOption(INTEREST_RETX, 2);
+
   //    sampleConsumer->setContextOption(MIN_WINDOW_SIZE, 1);
     
       sampleConsumer->setContextOption(INTEREST_LEAVE_CNTX, 
@@ -235,7 +243,8 @@ static void sig_int(int num)
                                       (ConsumerDataCallback)bind(&ConsumerCallback::processData, &cb_consumer, _1, _2));
   
       sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-      sampleConsumer->setContextOption(INTEREST_LIFETIME, 500);
+      sampleConsumer->setContextOption(INTEREST_LIFETIME, 250);
+      sampleConsumer->setContextOption(INTEREST_RETX, 2); //Retransmitted Attempted Time.
 
       sampleConsumer->setContextOption(INTEREST_LEAVE_CNTX, 
                                 (ConsumerInterestCallback)bind(&ConsumerCallback::processLeavingInterest, &cb_consumer, _1, _2));

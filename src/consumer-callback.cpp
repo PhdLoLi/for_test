@@ -120,19 +120,27 @@ namespace ndn {
     con.getContextOption(SUFFIX, suffix);
     int frameNumber = std::stoi(suffix.get(0).toUri());
 
-    printf("Video Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_v);
+//    printf("Video Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_v);
 
     payload_v += bufferSize;
     
     frame_cnt_v++;
 
-    if (buffers_v[frameNumber % (VIDEO_SIZE * 2)].data == NULL && buffers_v[frameNumber % (VIDEO_SIZE * 2)].length == 0) {
+    if (frameNumber >= playback_v && buffers_v[frameNumber % (VIDEO_SIZE * 2)].data == NULL && buffers_v[frameNumber % (VIDEO_SIZE * 2)].length == 0) {
       uint8_t* bufferTmp = new uint8_t[bufferSize];
       memcpy(bufferTmp, buffer, bufferSize);
       buffers_v[frameNumber % (VIDEO_SIZE * 2)].data = bufferTmp;
       buffers_v[frameNumber % (VIDEO_SIZE * 2)].length = bufferSize;
     } else {
       printf("Shouldn't Happen!!!!! for VIDEO frameNumber : %d\n", frameNumber);
+      while (playback_v <= frameNumber - VIDEO_SIZE * 2) {
+        if (buffers_v[playback_v % (VIDEO_SIZE * 2)].data != NULL) {
+          player.h264_appsrc_data(buffers_v[playback_v % (VIDEO_SIZE * 2)].data, buffers_v[playback_v % (VIDEO_SIZE * 2)].length);
+          buffers_v[playback_v % (VIDEO_SIZE * 2)].data = NULL;
+          buffers_v[playback_v % (VIDEO_SIZE * 2)].length = 0;
+        }
+        playback_v++;
+      }
     }
 
     // playback_v move data to playingback queue
@@ -177,7 +185,7 @@ namespace ndn {
     con.getContextOption(SUFFIX, suffix);
     int frameNumber = std::stoi(suffix.get(0).toUri());
 
-    printf("Audio Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_a);
+//    printf("Audio Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_a);
     payload_a += bufferSize;
 //    player.h264_appsrc_data_audio(buffer, bufferSize);
     interest_r++;
@@ -191,13 +199,21 @@ namespace ndn {
 //    con_a.notify_all();
 //    mut_a.unlock();
 
-    if (buffers_a[frameNumber % (AUDIO_SIZE * 2)].data == NULL && buffers_a[frameNumber % (AUDIO_SIZE * 2)].length == 0) {
+    if (frameNumber >= playback_a && buffers_a[frameNumber % (AUDIO_SIZE * 2)].data == NULL && buffers_a[frameNumber % (AUDIO_SIZE * 2)].length == 0) {
       uint8_t* bufferTmp = new uint8_t[bufferSize];
       memcpy(bufferTmp, buffer, bufferSize);
       buffers_a[frameNumber % (AUDIO_SIZE * 2)].data = bufferTmp;
       buffers_a[frameNumber % (AUDIO_SIZE * 2)].length = bufferSize;
     } else {
       printf("Shouldn't Happen!!!!! for AUDIO frameNumber : %d\n", frameNumber);
+      while (playback_a <= frameNumber - AUDIO_SIZE * 2) {
+        if (buffers_a[playback_a % (AUDIO_SIZE * 2)].data != NULL) {
+          player.h264_appsrc_data_audio(buffers_a[playback_a % (AUDIO_SIZE * 2)].data, buffers_a[playback_a % (AUDIO_SIZE * 2)].length);
+          buffers_a[playback_a % (AUDIO_SIZE * 2)].data = NULL;
+          buffers_a[playback_a % (AUDIO_SIZE * 2)].length = 0;
+        }
+        playback_a++;
+      }
     }
 
     // playback_a move data to playingback queue
