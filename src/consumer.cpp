@@ -187,15 +187,15 @@ static void sig_int(int num)
 
       Name sampleName = Name(live_prefix).append(stream_id).append("audio").append("content");
 
-      Consumer* sampleConsumer = new Consumer(sampleName, SDR);
+      Consumer* sampleConsumer = new Consumer(sampleName, RDR);
 
       sampleConsumer->setContextOption(CONTENT_RETRIEVED, 
                             (ConsumerContentCallback)bind(&ConsumerCallback::processPayloadAudio, &cb_consumer, _1, _2, _3));
 
       sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-      sampleConsumer->setContextOption(INTEREST_LIFETIME, 250);
+      sampleConsumer->setContextOption(INTEREST_LIFETIME, 300);
       // retransmission time is 2
-//      sampleConsumer->setContextOption(INTEREST_RETX, 2);
+      sampleConsumer->setContextOption(INTEREST_RETX, 3);
 
   //    sampleConsumer->setContextOption(MIN_WINDOW_SIZE, 1);
     
@@ -243,7 +243,7 @@ static void sig_int(int num)
                                       (ConsumerDataCallback)bind(&ConsumerCallback::processData, &cb_consumer, _1, _2));
   
       sampleConsumer->setContextOption(MUST_BE_FRESH_S, true);
-      sampleConsumer->setContextOption(INTEREST_LIFETIME, 250);
+      sampleConsumer->setContextOption(INTEREST_LIFETIME, 300);
       sampleConsumer->setContextOption(INTEREST_RETX, 2); //Retransmitted Attempted Time.
 
       sampleConsumer->setContextOption(INTEREST_LEAVE_CNTX, 

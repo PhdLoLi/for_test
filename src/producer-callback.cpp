@@ -78,7 +78,7 @@ namespace ndn {
       name = "video";
     }
     else {
-      sampleNumber =  std::stoi(interest.getName().get(-1).toUri());
+      sampleNumber =  std::stoi(interest.getName().get(-2).toUri());
       name = "audio";
     }
 //    std::cout << "Current Number" << std::dec << *m_curnum << std::endl;
