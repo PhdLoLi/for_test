@@ -85,9 +85,9 @@ namespace ndn {
 //      std::cout << "Cache Miss" << std::dec <<  "Request Number: " << sampleNumber << " current_number: " << *m_curnum << std::endl;
     if (sampleNumber > *m_curnum)
     {
-      std::cout << "My NACK!!!!!!" << name <<  std::dec << " Request Number: " << sampleNumber << " current_number: " << *m_curnum << std::endl;
-      ApplicationNack appNack(interest, ApplicationNack::PRODUCER_DELAY);
-      appNack.setDelay(5000); // in ms
+      printf("NACK!!!! Type: %s Request Number: %d Current Number: %zu", name.c_str(), sampleNumber, *m_curnum);
+//      ApplicationNack appNack(interest, ApplicationNack::PRODUCER_DELAY);
+//      appNack.setDelay(5000); // in ms
 //      m_producer->nack(appNack);
     }
 //    std::cout << "NO HIT Interest!" << interest.getName().toUri() << std::endl;
@@ -98,7 +98,7 @@ namespace ndn {
   ProducerCallback::processIncomingInterest(Producer& pro, const Interest& interest)
   {
     interest_incoming ++;
-    printf("processIncomingInterest %s\n", interest.getName().toUri().c_str());
+//    printf("processIncomingInterest %s\n", interest.getName().toUri().c_str());
 //    std::string type = interest.getName().get(-2).toUri();
 //    std::string streaminfo;
 //    std::cout << "processIncomingInterest type " << type << " streaminfo" << streaminfo << std::endl;
