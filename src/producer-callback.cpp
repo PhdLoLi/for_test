@@ -85,7 +85,7 @@ namespace ndn {
 //      std::cout << "Cache Miss" << std::dec <<  "Request Number: " << sampleNumber << " current_number: " << *m_curnum << std::endl;
     if (sampleNumber > *m_curnum)
     {
-      printf("NACK!!!! Type: %s Request Number: %d Current Number: %zu", name.c_str(), sampleNumber, *m_curnum);
+      printf("NACK!!!! Type: %s Request Number: %d Current Number: %zu\n", name.c_str(), sampleNumber, *m_curnum);
 //      ApplicationNack appNack(interest, ApplicationNack::PRODUCER_DELAY);
 //      appNack.setDelay(5000); // in ms
 //      m_producer->nack(appNack);

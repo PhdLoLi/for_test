@@ -13,7 +13,7 @@
 #include <iostream>
 #include "video-player.hpp"
 #include "video-frame.hpp"
-#define VIDEO_SIZE 35 
+#define VIDEO_SIZE 30 
 #define AUDIO_SIZE 25 
 
 // Enclosing code in ndn simplifies coding (can also use `using namespace ndn`)
