@@ -105,15 +105,15 @@ static void sig_int(int num)
   void 
   FrameConsumer::audioConsumeFrames() {
 
-    pool tp_audio(AUDIO_SIZE);
-    while (cb_consumer.framenumber_a < AUDIO_SIZE) {
+    pool tp_audio(cb_consumer.m_a_size);
+    while (cb_consumer.framenumber_a < cb_consumer.m_a_size) {
       cb_consumer.framenumber_a++;
 //      std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "ns\n";
 //      start = finish;
       Name sampleSuffix(std::to_string(cb_consumer.framenumber_a));
       cb_consumer.start_timer_audio();
 
-      int con_num = cb_consumer.framenumber_a % AUDIO_SIZE;
+      int con_num = cb_consumer.framenumber_a % cb_consumer.m_a_size;
       printf("--------- Audio Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_a, con_num);
 //      boost::thread(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
       tp_audio.schedule(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
@@ -125,15 +125,15 @@ static void sig_int(int num)
   void 
   FrameConsumer::videoConsumeFrames() {
 
-    pool tp_video(VIDEO_SIZE);
+    pool tp_video(cb_consumer.m_v_size);
 //    eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_video_thread, this, &cb_consumer, sampleConsumer));
-    while(cb_consumer.framenumber_v < VIDEO_SIZE) {
+    while(cb_consumer.framenumber_v < cb_consumer.m_v_size) {
 //      start = finish;
       cb_consumer.framenumber_v++;
       Name sampleSuffix(std::to_string(cb_consumer.framenumber_v));
       cb_consumer.start_timer_video();
 
-      int con_num = cb_consumer.framenumber_v % VIDEO_SIZE;
+      int con_num = cb_consumer.framenumber_v % cb_consumer.m_v_size;
       printf("--------- Video Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_v, con_num);
       tp_video.schedule(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
 //      boost::thread(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
@@ -153,7 +153,7 @@ static void sig_int(int num)
 
     printf("Audio start_FrameNumber: %d interval_a: %llu\n", framenumber, m_interval);
 
-    for (int i = 0; i < AUDIO_SIZE; i++) {
+    for (int i = 0; i < cb_consumer.m_a_size; i++) {
 
       Name sampleName = Name(live_prefix).append(stream_id).append("audio").append("content");
 
@@ -201,7 +201,7 @@ static void sig_int(int num)
 
     printf("Video start_FrameNumber: %d interval_v: %llu\n", framenumber, m_interval);
 
-    for (int i = 0; i < VIDEO_SIZE; i++) {
+    for (int i = 0; i < cb_consumer.m_v_size; i++) {
 
       Name sampleName = Name(live_prefix).append(stream_id).append("video").append("content");
       Consumer* sampleConsumer = new Consumer(sampleName, RDR);
