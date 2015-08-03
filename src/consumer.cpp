@@ -18,7 +18,8 @@ namespace ndn {
 
 time_t time_start;
 ConsumerCallback cb_consumer;
-
+//pool tp_audio(cb_consumer.m_a_size);
+//pool tp_video(cb_consumer.m_v_size);
 
   //when control-c detected, doing the analysis 
 static void sig_int(int num)
@@ -63,84 +64,115 @@ static void sig_int(int num)
     , m_ioService(m_face->getIoService())
     , m_scheduler(m_ioService)
     , m_interval(0)
+    , m_size(0)  
     , framenumber(0)
     , interval(0)
   {
   }
 
   void FrameConsumer::consume_audio_frame(Consumer* sampleConsumer, Name sampleSuffix) {
-    auto start = std::chrono::high_resolution_clock::now();
-    sampleConsumer->consume(sampleSuffix);
-    auto finish = std::chrono::high_resolution_clock::now();
-    printf("audio_suffix: %s finish %llu ms\n", sampleSuffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
+    Name suffix = sampleSuffix;
     while (1) {
       auto start = std::chrono::high_resolution_clock::now();
-      m_mut.lock();
-      cb_consumer.framenumber_a++;
-      Name suffix = Name(std::to_string(cb_consumer.framenumber_a));
-      m_mut.unlock();
       sampleConsumer->consume(suffix);
       auto finish = std::chrono::high_resolution_clock::now();
-      printf("audio_suffix: %s finish %llu ms\n", suffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
+      uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count();
+      uint64_t new_size = 441 * period / 10000 + 1; 
+      printf("Consumer audio_suffix: %s finish: %llu ms new_size: %llu\n", suffix.toUri().c_str(), period, new_size);
+
+      m_size_mut.lock();
+      if (new_size < m_size - 1) {
+        printf("Audio need to decrease m_size, original: %llu\n", m_size);
+        m_size--;
+        m_size_mut.unlock();
+        break;
+      }
+      m_size_mut.unlock();
+
+      m_mut.lock();
+      cb_consumer.framenumber_a++;
+      suffix = Name(std::to_string(cb_consumer.framenumber_a));
+      m_mut.unlock();
     }
   }
   
   void FrameConsumer::consume_video_frame(Consumer* sampleConsumer, Name sampleSuffix) {
-    auto start = std::chrono::high_resolution_clock::now();
-    sampleConsumer->consume(sampleSuffix);
-    auto finish = std::chrono::high_resolution_clock::now();
-    printf("video_suffix: %s finish %llu ms\n", sampleSuffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
+    Name suffix = sampleSuffix;
     while (1) {
       auto start = std::chrono::high_resolution_clock::now();
-      m_mut.lock();
-      cb_consumer.framenumber_v++;
-      Name suffix = Name(std::to_string(cb_consumer.framenumber_v));
-      m_mut.unlock();
       sampleConsumer->consume(suffix);
       auto finish = std::chrono::high_resolution_clock::now();
-      printf("video_suffix: %s finish %llu ms\n", suffix.toUri().c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count());
+      uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count();
+      uint64_t new_size = 30 * period / 1000 + 1; 
+      printf("Consumer video_suffix: %s finish: %llu ms new_size: %llu\n", suffix.toUri().c_str(), period, new_size);
+
+      m_size_mut.lock();
+      if (new_size < m_size - 1) {
+        printf("Video need to decrease m_size, original: %llu\n", m_size);
+        m_size--;
+        m_size_mut.unlock();
+        break;
+      }
+
+      m_size_mut.unlock();
+      m_mut.lock();
+      cb_consumer.framenumber_v++;
+      suffix = Name(std::to_string(cb_consumer.framenumber_v));
+      m_mut.unlock();
     }
   }
 
   void 
   FrameConsumer::audioConsumeFrames() {
 
-    pool tp_audio(cb_consumer.m_a_size);
     while (cb_consumer.framenumber_a < cb_consumer.m_a_size) {
-      cb_consumer.framenumber_a++;
 //      std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() << "ns\n";
 //      start = finish;
+      m_mut.lock();
       Name sampleSuffix(std::to_string(cb_consumer.framenumber_a));
       cb_consumer.start_timer_audio();
 
       int con_num = cb_consumer.framenumber_a % cb_consumer.m_a_size;
       printf("--------- Audio Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_a, con_num);
-//      boost::thread(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
-      tp_audio.schedule(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
+
+//      tp_audio.schedule(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
+      boost::thread(boost::bind(&FrameConsumer::consume_audio_frame, this, m_consumers[con_num], sampleSuffix));
+      cb_consumer.framenumber_a++;
+      m_mut.unlock();
+
 //      std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
     }
-    tp_audio.wait();
+    m_mut.lock();
+    cb_consumer.framenumber_a = cb_consumer.m_a_size - 1;
+    m_mut.unlock();
+//    tp_audio.wait();
   }
 
   void 
   FrameConsumer::videoConsumeFrames() {
 
-    pool tp_video(cb_consumer.m_v_size);
 //    eventid = m_scheduler.scheduleEvent(interval, bind(&FrameConsumer::consume_video_thread, this, &cb_consumer, sampleConsumer));
     while(cb_consumer.framenumber_v < cb_consumer.m_v_size) {
 //      start = finish;
-      cb_consumer.framenumber_v++;
+      m_mut.lock();
       Name sampleSuffix(std::to_string(cb_consumer.framenumber_v));
       cb_consumer.start_timer_video();
 
       int con_num = cb_consumer.framenumber_v % cb_consumer.m_v_size;
       printf("--------- Video Consume Frame Number: %d con_num: %d ---------- handle\n", cb_consumer.framenumber_v, con_num);
-      tp_video.schedule(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
-//      boost::thread(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
-//      boost::thread(consume_video_frame, m_consumers[con_num], sampleSuffix);
+//      tp_video.schedule(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
+      boost::thread(boost::bind(&FrameConsumer::consume_video_frame, this, m_consumers[con_num], sampleSuffix));
+
+      cb_consumer.framenumber_v++;
+      m_mut.unlock();
+
 //      std::this_thread::sleep_for(std::chrono::nanoseconds(m_interval));
     }
-    tp_video.wait();
+    m_mut.lock();
+    cb_consumer.framenumber_v = cb_consumer.m_v_size - 1;
+    m_mut.unlock();
+
+//    tp_video.wait();
   }
 
   void
@@ -185,9 +217,10 @@ static void sig_int(int num)
       m_consumers.push_back(sampleConsumer);
     }
 
-    cb_consumer.start_timer_audio();
-    m_consumers[0]->consume("0");
+//    cb_consumer.start_timer_audio();
+//    m_consumers[0]->consume("0");
 
+    m_size = cb_consumer.m_a_size;
     printf("m_consumers_audio size: %lu\n", m_consumers.size());
   }
 
@@ -230,9 +263,10 @@ static void sig_int(int num)
       m_consumers.push_back(sampleConsumer);
     }
  
-    cb_consumer.start_timer_video();
-    m_consumers[0]->consume("0");
+//    cb_consumer.start_timer_video();
+//    m_consumers[0]->consume("0");
     
+    m_size = cb_consumer.m_v_size;
     printf("m_consumers_video size: %lu\n", m_consumers.size());
   }
 
@@ -314,7 +348,6 @@ static void sig_int(int num)
       Name videoName(live_prefix + "/video/content");
       */
 
-      signal(SIGINT, sig_int);
 //      boost::asio::signal_set terminationSignalSet(a_fc.m_ioService);
 //      terminationSignalSet.add(SIGINT);
 //      terminationSignalSet.add(SIGTERM);
@@ -329,6 +362,8 @@ static void sig_int(int num)
 //      std::thread(std::bind(&FrameConsumer::audioConsumeFrames, &a_fc, live_prefix, stream_id));
       boost::thread(boost::bind(&FrameConsumer::audioConsumeFrames, &a_fc));
       boost::thread(boost::bind(&FrameConsumer::videoConsumeFrames, &v_fc));
+
+      signal(SIGINT, sig_int);
 
 //      a_fc.audioConsumeFrames(live_prefix, stream_id);
       //video consumer

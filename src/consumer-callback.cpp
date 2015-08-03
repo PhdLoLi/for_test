@@ -33,8 +33,8 @@ namespace ndn {
     start_frame_a = 0;
     frame_cnt_v = 0;
     frame_cnt_a = 0;
-    m_v_size = 10;
-    m_a_size = 10;
+    m_v_size = 31;
+    m_a_size = 23;
     buffers_v.resize((m_v_size * 10), DataNode_G(0, NULL));
     buffers_a.resize((m_a_size * 10), DataNode_G(0, NULL));
     ready_v = false;
@@ -110,9 +110,6 @@ namespace ndn {
   void
   ConsumerCallback::processPayload(Consumer& con, const uint8_t* buffer, size_t bufferSize)
   {
-//    std::cout << "video Size:" << std::dec << bufferSize <<std::endl;
-//    std::cout << "video bufferSize " << bufferSize <<std::endl;
-//    std::cout << "@buffer " << &buffer <<std::endl;
   
     frame_cnt_v_m.lock();
 //    auto finish = std::chrono::high_resolution_clock::now();
@@ -121,12 +118,6 @@ namespace ndn {
     Name suffix;
     con.getContextOption(SUFFIX, suffix);
     int frameNumber = std::stoi(suffix.get(0).toUri());
-
-//    printf("Video Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_v);
-
-    payload_v += bufferSize;
-    
-    frame_cnt_v++;
 
     if (frameNumber >= playback_v && buffers_v[frameNumber % (m_v_size * 10)].data == NULL && buffers_v[frameNumber % (m_v_size * 10)].length == 0) {
       uint8_t* bufferTmp = new uint8_t[bufferSize];
@@ -148,6 +139,7 @@ namespace ndn {
     // playback_v move data to playingback queue
     while (playback_v <= framenumber_v && buffers_v[playback_v % (m_v_size * 10)].data != NULL) {
 
+      printf("Video Data Playback! Frame_Interest: %d Frame_Counter: %d playback_v: %d\n", frameNumber, frame_cnt_v, playback_v);
       player.h264_appsrc_data(buffers_v[playback_v % (m_v_size * 10)].data, buffers_v[playback_v % (m_v_size * 10)].length);
       buffers_v[playback_v % (m_v_size * 10)].data = NULL;
       buffers_v[playback_v % (m_v_size * 10)].length = 0;
@@ -155,22 +147,10 @@ namespace ndn {
 
     }
 
-//    if (framenumber_v > 0)
-//      suffix = Name(std::to_string(++framenumber_v));
-
-//    con.setContextOption(SUFFIX, Name("empty"));
-//
-//    mut_v.lock();
-//    ready_v = true;
-//    con_v.notify_all();
-//    mut_v.unlock();
+    payload_v += bufferSize;
+    frame_cnt_v++;
 
     frame_cnt_v_m.unlock();
-//    if (framenumber_v > 0) {
-//      printf("video suffix %s\n", suffix.toUri().c_str());
-//      con.consume(suffix);
-//      printf("video after consume suffix %s\n", suffix.toUri().c_str());
-//    }
 
   }
 
@@ -187,19 +167,6 @@ namespace ndn {
     con.getContextOption(SUFFIX, suffix);
     int frameNumber = std::stoi(suffix.get(0).toUri());
 
-//    printf("Audio Data received! Frame_Interest: %d Frame_Counter: %d \n", frameNumber, frame_cnt_a);
-    payload_a += bufferSize;
-//    player.h264_appsrc_data_audio(buffer, bufferSize);
-    interest_r++;
-    interest_r_a++;
-    frame_cnt_a++;
-
-//    con.setContextOption(SUFFIX, Name("empty"));
-//
-//    mut_a.lock();
-//    ready_a = true;
-//    con_a.notify_all();
-//    mut_a.unlock();
 
     if (frameNumber >= playback_a && buffers_a[frameNumber % (m_a_size * 10)].data == NULL && buffers_a[frameNumber % (m_a_size * 10)].length == 0) {
       uint8_t* bufferTmp = new uint8_t[bufferSize];
@@ -221,22 +188,19 @@ namespace ndn {
     // playback_a move data to playingback queue
     while (playback_a <= framenumber_a && buffers_a[playback_a % (m_a_size * 10)].data != NULL) {
 
+      printf("Audio Data Playback! Frame_Interest: %d Frame_Counter: %d playback_a: %d\n", frameNumber, frame_cnt_a, playback_a);
       player.h264_appsrc_data_audio(buffers_a[playback_a % (m_a_size * 10)].data, buffers_a[playback_a % (m_a_size * 10)].length);
       buffers_a[playback_a % (m_a_size * 10)].data = NULL;
       buffers_a[playback_a % (m_a_size * 10)].length = 0;
       playback_a++;
     }
 
-//    if (framenumber_a > 0)
-//      suffix = Name(std::to_string(++framenumber_a));
+    payload_a += bufferSize;
+    interest_r++;
+    interest_r_a++;
+    frame_cnt_a++;
 
     interest_r_a_m.unlock();
-//    if (framenumber_a > 0) {
-//      printf("audio suffix %s\n", suffix.toUri().c_str());
-//      con.consume(suffix);
-//      printf("audio after consume suffix %s\n", suffix.toUri().c_str());
-//    }
-
   }
   
   void

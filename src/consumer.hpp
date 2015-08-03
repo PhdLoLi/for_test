@@ -63,7 +63,9 @@ namespace ndn{
     Scheduler m_scheduler;
     std::vector<Consumer *> m_consumers;
     boost::mutex m_mut;
+    boost::mutex m_size_mut;
     uint64_t m_interval;
+    uint64_t m_size;
     
     int framenumber;
     EventId eventid;
