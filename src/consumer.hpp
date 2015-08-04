@@ -66,6 +66,9 @@ namespace ndn{
     boost::mutex m_size_mut;
     uint64_t m_interval;
     uint64_t m_size;
+    uint64_t m_accum;
+    uint64_t m_counter;
+    uint64_t m_avg;
     
     int framenumber;
     EventId eventid;

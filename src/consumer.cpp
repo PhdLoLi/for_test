@@ -65,6 +65,9 @@ static void sig_int(int num)
     , m_scheduler(m_ioService)
     , m_interval(0)
     , m_size(0)  
+    , m_accum(0)  
+    , m_counter(0)  
+    , m_avg(0)  
     , framenumber(0)
     , interval(0)
   {
@@ -77,22 +80,43 @@ static void sig_int(int num)
       sampleConsumer->consume(suffix);
       auto finish = std::chrono::high_resolution_clock::now();
       uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count();
-      uint64_t new_size = 441 * period / 10000 + 1; 
-      printf("Consumer audio_suffix: %s finish: %llu ms new_size: %llu\n", suffix.toUri().c_str(), period, new_size);
 
       m_size_mut.lock();
-      if (new_size < m_size - 1) {
-        printf("Audio need to decrease m_size, original: %llu\n", m_size);
+      m_accum += period;
+      m_counter++;
+      if (m_counter >= m_size / 2) {
+        uint64_t new_size = 441 * m_accum / (10000 * m_counter) + 1; 
+        m_avg = new_size;
+        printf("Consumer audio_suffix: %s finish: %llu ms new_size: %llu now_size: %llu\n", suffix.toUri().c_str(), period, new_size, m_size);
+        m_accum = 0;
+        m_counter = 0;
+      }
+
+      if (m_avg > 0 && m_avg < m_size * 2 / 3) {
+        printf("Audio need to decrease m_size: %llu m_avg: %llu\n", m_size, m_avg);
         m_size--;
         m_size_mut.unlock();
         break;
-      }
+      } 
       m_size_mut.unlock();
 
       m_mut.lock();
       cb_consumer.framenumber_a++;
       suffix = Name(std::to_string(cb_consumer.framenumber_a));
       m_mut.unlock();
+
+//      if (new_size > m_size + 1) {
+//        printf("Audio need to increase m_size, original: %llu\n", m_size);
+//        m_size_mut.lock();
+//        m_size++;
+//        m_size_mut.unlock();
+//        boost::thread(boost::bind(&FrameConsumer::consume_audio_frame, this, sampleConsumer, suffix));
+//        m_mut.lock();
+//        cb_consumer.framenumber_a++;
+//        suffix = Name(std::to_string(cb_consumer.framenumber_a));
+//        m_mut.unlock();
+//      }  
+
     }
   }
   
@@ -103,22 +127,43 @@ static void sig_int(int num)
       sampleConsumer->consume(suffix);
       auto finish = std::chrono::high_resolution_clock::now();
       uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start).count();
-      uint64_t new_size = 30 * period / 1000 + 1; 
-      printf("Consumer video_suffix: %s finish: %llu ms new_size: %llu\n", suffix.toUri().c_str(), period, new_size);
 
       m_size_mut.lock();
-      if (new_size < m_size - 1) {
-        printf("Video need to decrease m_size, original: %llu\n", m_size);
+      m_accum += period;
+      m_counter++;
+      if (m_counter >= m_size / 2) {
+        uint64_t new_size = 30 * m_accum / (1000 * m_counter) + 1; 
+        m_avg = new_size;
+        printf("Consumer video_suffix: %s finish: %llu ms new_size: %llu now_size: %llu\n", suffix.toUri().c_str(), period, new_size, m_size);
+        m_accum = 0;
+        m_counter = 0;
+      } 
+
+      if (m_avg > 0 && m_avg < m_size * 2 / 3) {
+        printf("Video need to decrease m_size: %llu m_avg: %llu\n", m_size, m_avg);
         m_size--;
         m_size_mut.unlock();
         break;
-      }
+      } 
 
       m_size_mut.unlock();
+
       m_mut.lock();
       cb_consumer.framenumber_v++;
       suffix = Name(std::to_string(cb_consumer.framenumber_v));
       m_mut.unlock();
+
+//      if (new_size > m_size + 1) {
+//        printf("Video need to increase m_size, original: %llu\n", m_size);
+//        m_size_mut.lock();
+//        m_size++;
+//        m_size_mut.unlock();
+//        boost::thread(boost::bind(&FrameConsumer::consume_video_frame, this, sampleConsumer, suffix));
+//        m_mut.lock();
+//        cb_consumer.framenumber_v++;
+//        suffix = Name(std::to_string(cb_consumer.framenumber_v));
+//        m_mut.unlock();
+//      } 
     }
   }
 
@@ -221,6 +266,7 @@ static void sig_int(int num)
 //    m_consumers[0]->consume("0");
 
     m_size = cb_consumer.m_a_size;
+    m_avg = m_size;
     printf("m_consumers_audio size: %lu\n", m_consumers.size());
   }
 
@@ -267,6 +313,7 @@ static void sig_int(int num)
 //    m_consumers[0]->consume("0");
     
     m_size = cb_consumer.m_v_size;
+    m_avg = m_size;
     printf("m_consumers_video size: %lu\n", m_consumers.size());
   }
 
