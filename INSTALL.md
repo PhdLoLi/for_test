@@ -9,7 +9,6 @@ These are prerequisites to build NDNlive.
 * [boost](http://www.boost.org/)
 * [consumer-producer-api](https://github.com/iliamo/Consumer-Producer-API)
 * [NFD](https://github.com/named-data/NFD.git)
-* [repo-ng](https://github.com/named-data/repo-ng.git)
 * [gstreamer-1.0](http://gstreamer.freedesktop.org/data/pkg/osx/1.4.3/)
 
 Prerequisites build instructions
@@ -37,7 +36,7 @@ downlaod from http://gstreamer.freedesktop.org/data/pkg/osx/1.4.3/
 **Installation: please follow the order listed below. Only tested on the 1.4.3, use exactly this version.**
 * gstreamer-1.0-1.4.3-universal.pkg  --- the basic gstreamer lib
 * gstreamer-1.0-devel-1.4.3-universal.pkg  --- the develpoer gstreamer lib
-* gstreamer-1.0-1.4.3-universal-packages.dmg --- some useful plugins, please install all of them expect the last one
+* gstreamer-1.0-1.4.3-universal-packages.dmg --- some useful plugins, please install all of them except the last one
 
 **Config:**
 * Please add /Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig to your $PKG_CONFIG_PATH
