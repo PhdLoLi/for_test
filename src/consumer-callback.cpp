@@ -1,8 +1,8 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/**
- * Copyright (c) 2014 Regents of the University of California.
+/*
+ * Copyright (c) 2014-2015 Regents of the University of California.
  *
- * @author Lijing Wang phdloli@ucla.edu
+ * @author Lijing Wang wanglj11@mails.tsinghua.edu.cn
  */
 
 #include "video-player.hpp"
@@ -43,9 +43,6 @@ namespace ndn {
     playback_a = 0;
     framenumber_v = 0;
     framenumber_a = 0;
-//    std::cout << "Construction" << std::endl;
-//    player.playbin_appsrc_init();
-//    std::cout << "Construction Over" << std::endl;
   }
   
   void
@@ -112,8 +109,7 @@ namespace ndn {
   {
   
     frame_cnt_v_m.lock();
-//    auto finish = std::chrono::high_resolution_clock::now();
-//    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_v).count());
+
 
     Name suffix;
     con.getContextOption(SUFFIX, suffix);
@@ -160,8 +156,6 @@ namespace ndn {
 
     interest_r_a_m.lock();
 
-//    auto finish = std::chrono::high_resolution_clock::now();
-//    printf("%llu ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_a).count());
 
     Name suffix;
     con.getContextOption(SUFFIX, suffix);
@@ -207,11 +201,7 @@ namespace ndn {
   ConsumerCallback::processStreaminfo(Consumer& con, const uint8_t* buffer, size_t bufferSize)
   {
     std::string streaminfo((char*) buffer);
-  //  long fileLength = std::stol(content);
-  //  std::cout << "bufferSize " << bufferSize <<std::endl;
-  //  std::cout << "buffer " << buffer <<std::endl;
- //   std::cout << "streaminfo " << streaminfo <<std::endl;
-  //  std::cout << "fileLength " << fileLength <<std::endl;
+
     std::cout << "processStreaminfo " << streaminfo << std::endl;
     player.get_streaminfo(streaminfo);
   }

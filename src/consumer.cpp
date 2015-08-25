@@ -1,8 +1,8 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/**
- * Copyright (c) 2014 Regents of the University of California.
+/*
+ * Copyright (c) 2014-2015 Regents of the University of California.
  *
- * @author Lijing Wang phdloli@ucla.edu
+ * @author Lijing Wang wanglj11@mails.tsinghua.edu.cn
  */
 
 #include "consumer.hpp"
@@ -18,8 +18,7 @@ namespace ndn {
 
 time_t time_start;
 ConsumerCallback cb_consumer;
-//pool tp_audio(cb_consumer.m_a_size);
-//pool tp_video(cb_consumer.m_v_size);
+
 
   //when control-c detected, doing the analysis 
 static void sig_int(int num)
@@ -105,18 +104,6 @@ static void sig_int(int num)
       suffix = Name(std::to_string(cb_consumer.framenumber_a));
       m_mut.unlock();
 
-//      if (new_size > m_size + 1) {
-//        printf("Audio need to increase m_size, original: %llu\n", m_size);
-//        m_size_mut.lock();
-//        m_size++;
-//        m_size_mut.unlock();
-//        boost::thread(boost::bind(&FrameConsumer::consume_audio_frame, this, sampleConsumer, suffix));
-//        m_mut.lock();
-//        cb_consumer.framenumber_a++;
-//        suffix = Name(std::to_string(cb_consumer.framenumber_a));
-//        m_mut.unlock();
-//      }  
-
     }
   }
   
@@ -153,17 +140,6 @@ static void sig_int(int num)
       suffix = Name(std::to_string(cb_consumer.framenumber_v));
       m_mut.unlock();
 
-//      if (new_size > m_size + 1) {
-//        printf("Video need to increase m_size, original: %llu\n", m_size);
-//        m_size_mut.lock();
-//        m_size++;
-//        m_size_mut.unlock();
-//        boost::thread(boost::bind(&FrameConsumer::consume_video_frame, this, sampleConsumer, suffix));
-//        m_mut.lock();
-//        cb_consumer.framenumber_v++;
-//        suffix = Name(std::to_string(cb_consumer.framenumber_v));
-//        m_mut.unlock();
-//      } 
     }
   }
 
