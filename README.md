@@ -42,7 +42,7 @@ Config
 
 Run
 --
-Please keep NFD and Repo-ng Running.
+Please keep NFD running.
 Please run these binary files on the toppest path of the project (the same path with config.ini).
 
 - Terminal 1 -- Publishing video & audio 
